@@ -121,6 +121,18 @@
   .wear-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:7px}
   .wear-list li{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.84rem;font-weight:500}
 
+  /* Ballpark lines */
+  .lines{display:flex;flex-direction:column;gap:11px;margin-top:6px}
+  .line{display:flex;gap:10px;align-items:flex-start}
+  .line .lg{font-size:1.4rem;line-height:1.25;flex:0 0 auto}
+  .line .lx{flex:1;min-width:0;font-size:.9rem}
+  .line .lx b{font-family:var(--disp)}
+  .lean{align-self:center;flex:0 0 auto;font-family:var(--mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;
+    padding:3px 8px;border-radius:999px;white-space:nowrap;color:#fff}
+  .lean.over{background:var(--good)} .lean.under{background:var(--amber)}
+  .lean.no{background:var(--bad)} .lean.push{background:var(--ink-soft)}
+  .disclaim{font-size:.74rem;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink-soft)}
+
   /* AQI gauge */
   .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
   .aqi-num b{font-family:var(--disp);font-weight:900;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
@@ -353,6 +365,76 @@ function dressFor(feels,pop,wind,uv,code){
   return {lead,items};
 }
 
+/* ================= ballpark: wind direction, evening drop, wear, sports lines ================= */
+function compass(d){ if(d==null) return ""; return ["N","NE","E","SE","S","SW","W","NW"][Math.round(d/45)%8]; }
+
+function eveningFeels(fc){
+  const h=fc.hourly, off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off;
+  let start=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000); if(start<0) start=0;
+  const end=Math.min(start+18,h.time.length), vals=[];
+  for(let i=start;i<end;i++){ const hr=new Date(Date.parse(h.time[i]+"Z")).getUTCHours();
+    if(hr>=18&&hr<=22){ vals.push(h.apparent_temperature?h.apparent_temperature[i]:h.temperature_2m[i]); } }
+  return vals.length? Math.round(Math.min(...vals)) : null;
+}
+
+function bleacherWear(feels,pop,wind,uv,code,evn){
+  const items=[]; let lead;
+  const wet=pop>=50||[51,53,55,61,63,65,80,81,82,95,96,99].includes(code);
+  const snow=[71,73,75,77,85,86].includes(code);
+  if(feels<=20){ lead="You'll be sitting still in the cold for three hours. Dress like it's a survival exercise, because it is.";
+    items.push("🧥 Parka, not a jacket","🧣 Scarf + hat","🧤 Gloves","🔥 Hand & foot warmers","🪑 Seat cushion (metal bleachers are merciless)","🧦 Wool socks","☕ Thermos of something warm"); }
+  else if(feels<40){ lead="Cold-game kit. The sun leaves, the metal stays freezing.";
+    items.push("🧥 Heavy coat","🎧 Beanie","🧤 Gloves","🪑 Something to sit on","🧣 Blanket for the late innings"); }
+  else if(feels<55){ lead="Deceptively chilly once you stop moving. Bring the layer you'll pretend you didn't need.";
+    items.push("🧥 Hoodie + an extra layer","👖 Long pants","🪑 Seat cushion","🧦 Real socks"); }
+  else if(feels<72){ lead="Pleasant now, cooler by the 7th. Pack for the version of today that happens at night.";
+    items.push("👕 Long-sleeve or tee","🧥 Light layer for the evening drop","🧢 Hat","🕶️ Sunglasses"); }
+  else if(feels<86){ lead="Good game weather. Mind the sun, mind the beer line.";
+    items.push("👕 T-shirt","🧢 Cap","🕶️ Sunglasses","🧴 Sunscreen","💧 Water"); }
+  else { lead="Hot-seat special. Shade and water are the whole strategy.";
+    items.push("👕 Lightest shirt you own","🧢 Hat","🕶️ Sunglasses","🧴 Sunscreen, reapplied","💧 Water, then more","🧊 A frozen towel if you're fancy"); }
+  if(wet) items.push("🧥 Poncho (umbrellas start fights in the stands)");
+  if(snow) items.push("❄️ Waterproof boots");
+  if(wind>=18) items.push("💨 Secure the hat or kiss it goodbye");
+  if(uv>=7 && feels<72) items.push("🧴 Sunscreen (yes, even now)");
+  let note=null;
+  if(evn!=null && (feels-evn)>=8) note="First pitch feels like ~"+Math.round(feels)+"°, but by the late innings it's ~"+evn+"°. That layer is not optional.";
+  return {lead,items,note};
+}
+
+function sportsLines(feels,temp,wind,gust,pop,code){
+  const storm=[95,96,99].includes(code), heavy=[65,82,86,75].includes(code);
+  const wet=pop>=50||[51,53,55,61,63,65,80,81,82].includes(code)||storm;
+  const snow=[71,73,75,77,85,86].includes(code);
+  const windy=wind>=18||gust>=28, calm=wind<8, frigid=feels<=20, cold=feels<40, hot=feels>=88;
+  const L=[];
+  // Baseball
+  if(storm||heavy||snow) L.push({icon:"⚾",sport:"Baseball",text:"The tarp's coming out. First pitch is a maybe; your $14 nachos are not.",lean:"Rain delay",cls:"no"});
+  else if(hot&&calm) L.push({icon:"⚾",sport:"Baseball",text:"Hot and dead-still — thin, warm air and the ball flies. So do the beer prices.",lean:"Over",cls:"over"});
+  else if(windy&&feels>=58) L.push({icon:"⚾",sport:"Baseball",text:"Wind's whipping through — fly balls become a group project for the outfield.",lean:"Chaos / over",cls:"over"});
+  else if(feels<50) L.push({icon:"⚾",sport:"Baseball",text:"Chilly for baseball — the ball doesn't carry, and neither does your enthusiasm.",lean:"Under",cls:"under"});
+  else L.push({icon:"⚾",sport:"Baseball",text:"Honest baseball weather. The ball behaves. So, suspiciously, does everyone else.",lean:"Pick 'em",cls:"push"});
+  // Football
+  if(frigid) L.push({icon:"🏈",sport:"Football",text:"Lambeau-core. "+Math.round(feels)+"° feels-like — frozen-tundra ball. Run game, shanked kicks, frostbitten fingers.",lean:"Under, hard",cls:"under"});
+  else if(cold&&windy) L.push({icon:"🏈",sport:"Football",text:"Cold and windy — the passing game shrinks and the punter quietly updates his résumé.",lean:"Under",cls:"under"});
+  else if(wet) L.push({icon:"🏈",sport:"Football",text:"Sloppy track. Fumbles, short fields, and a kicker living a nightmare.",lean:"Under / run",cls:"under"});
+  else if(hot) L.push({icon:"🏈",sport:"Football",text:"Warm for football — early-season sweat bowl. Cramp city by the fourth quarter.",lean:"Slight over",cls:"over"});
+  else L.push({icon:"🏈",sport:"Football",text:"Fair football weather. No excuses — which is its own special kind of pressure.",lean:"Pick 'em",cls:"push"});
+  // Golf
+  if(storm) L.push({icon:"⛳",sport:"Golf",text:"Lightning plus a bag of irons is a cautionary tale. The clubhouse is undefeated.",lean:"Clubhouse",cls:"no"});
+  else if(windy) L.push({icon:"⛳",sport:"Golf",text:"Gusts to "+Math.round(gust)+" — par just became aspirational and your slice is now a felony.",lean:"Blame the wind",cls:"under"});
+  else if(wet) L.push({icon:"⛳",sport:"Golf",text:"Wet and soft — no roll, plugged lies, soggy socks. Lift, clean, and complain.",lean:"Soft",cls:"under"});
+  else if(hot) L.push({icon:"⛳",sport:"Golf",text:"Hot one — ride the cart, hydrate, reapply. The back nine is where scorecards go to die.",lean:"Fade late",cls:"under"});
+  else L.push({icon:"⛳",sport:"Golf",text:"Genuinely nice golf weather. Deeply suspicious. Tee off before the sky reconsiders.",lean:"Send it",cls:"over"});
+  // Tailgate
+  if(frigid) L.push({icon:"🍺",sport:"Tailgate",text:"Survival tailgate. Propane, chili, and decisions you'll defend forever. We'll be there.",lean:"4/10",cls:"under"});
+  else if(storm||heavy) L.push({icon:"🍺",sport:"Tailgate",text:"Soggy lot. The grill is fighting for its life and losing with dignity.",lean:"3/10",cls:"no"});
+  else if(cold) L.push({icon:"🍺",sport:"Tailgate",text:"Crisp lot, cold hands, hot brats. This is the good stuff, actually.",lean:"7/10",cls:"over"});
+  else if(hot) L.push({icon:"🍺",sport:"Tailgate",text:"Parking-lot sauna. Keep the cooler full and the cornhole in the shade.",lean:"6/10",cls:"push"});
+  else L.push({icon:"🍺",sport:"Tailgate",text:"Chef's-kiss tailgate weather. Clear skies, cold cans. Call in sick tomorrow.",lean:"10/10",cls:"over"});
+  return L;
+}
+
 /* ================= stay-home verdict ================= */
 function verdict(feels,pop,wind,gust,aqi,code,alertTier){
   const reasons=[]; let score=0;
@@ -454,8 +536,8 @@ async function go(place){
   alertsEl.hidden=true; alertsEl.innerHTML="";
   const {lat,lon}=place;
   const fUrl="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
-    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_gusts_10m"+
-    "&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,is_day"+
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m"+
+    "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,weather_code,is_day"+
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max"+
     "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=10";
   const aUrl="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon+
@@ -494,6 +576,7 @@ function render(place, fc, air, alerts){
   const cur=fc.current, d=fc.daily;
   const temp=cur.temperature_2m, feels=cur.apparent_temperature, hum=cur.relative_humidity_2m;
   const wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code, isDay=cur.is_day===1;
+  const windDir=cur.wind_direction_10m;
   const aqi = air && air.current ? air.current.us_aqi : null;
   const pop0 = d.precipitation_probability_max ? d.precipitation_probability_max[0] : 0;
   const uv0 = d.uv_index_max ? d.uv_index_max[0] : 0;
@@ -536,7 +619,7 @@ function render(place, fc, air, alerts){
         </div>
       </div>
       <div class="nowstats">
-        ${chip("Humidity",hum+"%")}${chip("Wind",Math.round(wind)+" mph")}${chip("Gusts",Math.round(gust)+" mph")}
+        ${chip("Humidity",hum+"%")}${chip("Wind",(windDir!=null?compass(windDir)+" ":"")+Math.round(wind)+" mph")}${chip("Gusts",Math.round(gust)+" mph")}
         ${chip("Rain today",Math.round(pop0)+"%")}${chip("UV index",Math.round(uv0))}${chip("Air (AQI)", aqi==null?"—":Math.round(aqi))}
       </div>
       <div class="quip"><b>The read:</b> ${heroQuip(feels,temp,hum,wind,code,isDay)}</div>
@@ -552,6 +635,20 @@ function render(place, fc, air, alerts){
         <p>${cat.note}${air&&air.current&&air.current.pm2_5!=null?` <span style="font-family:var(--mono);font-size:.78rem">PM2.5 ${Math.round(air.current.pm2_5)} µg/m³</span>`:""}</p></div>
       <div class="card"><h2>Humidity &amp; comfort</h2><div class="verdict" style="font-size:1.6rem;color:var(--ink)">${hum}%</div>
         <p>${humidityNote(hum,temp)}</p></div>
+    </div>
+
+    <div class="section-head"><h2>The Ballpark Report</h2><small>weather vs. the game</small></div>
+    <div class="grid">
+      <div class="card"><h2>The weather line</h2>
+        <div class="lines">${sportsLines(feels,temp,wind,gust,pop0,code).map(l=>
+          `<div class="line"><span class="lg" aria-hidden="true">${l.icon}</span><div class="lx"><b>${l.sport}.</b> ${l.text}</div><span class="lean ${l.cls}">${l.lean}</span></div>`).join("")}</div>
+        <p class="disclaim">Entertainment only, not betting advice. The only lock is that the weather will let you down.</p></div>
+      <div class="card"><h2>Dressing for the bleachers</h2>
+        ${(()=>{const bp=bleacherWear(feels,pop0,wind,uv0,code,eveningFeels(fc));
+          return `<div class="verdict" style="font-size:1.1rem;color:var(--ink)">${bp.lead}</div>
+            <ul class="wear-list">${bp.items.map(i=>`<li>${i}</li>`).join("")}</ul>
+            ${bp.note?`<p>${bp.note}</p>`:""}`;})()}
+      </div>
     </div>
 
     <div class="section-head"><h2>Today, Hour by Hour</h2><small>next 24 hours</small></div>
