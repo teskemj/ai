@@ -165,6 +165,45 @@
   .moonbig .mi b{font-family:var(--disp);font-weight:700;font-size:1.1rem;display:block}
   .moonbig .mi span{font-size:.82rem;color:var(--ink-soft)}
 
+  /* Pro / paywall */
+  .pro-tag{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--amber);color:#1a1205;border-radius:999px;padding:2px 7px;vertical-align:middle;font-weight:700}
+  button.icon.pro{background:var(--amber);border-color:var(--amber);color:#1a1205;font-weight:700;font-family:var(--mono);
+    font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;padding:9px 12px}
+  button.icon.pro.on{background:transparent;color:var(--accent);border-color:var(--accent)}
+  .card.locked{display:flex;align-items:center;justify-content:center;text-align:center;border-style:dashed;min-height:150px}
+  .card.locked .lockwrap{max-width:360px}
+  .card.locked .lockicon{font-size:1.8rem}
+  .card.locked h2{font-family:var(--disp);font-weight:700;font-size:1.15rem;letter-spacing:-.01em;color:var(--ink);margin:6px 0 4px;text-transform:none}
+  .card.locked p{margin:0 0 12px}
+  .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;
+    background:rgba(8,12,18,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+  .modal .sheet{position:relative;width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
+    border-radius:18px;box-shadow:var(--shadow);padding:24px}
+  .modal .x{position:absolute;top:10px;right:10px;border:0;background:none;font-size:1.4rem;line-height:1;color:var(--ink-soft);padding:6px}
+  .modal h2{font-family:var(--disp);font-weight:700;font-size:1.3rem;margin:0 0 2px}
+  .modal .lede{color:var(--ink-soft);margin:0 0 14px}
+  .modal .feat{list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:9px;font-size:.92rem}
+  .modal .price{font-family:var(--disp);font-weight:700;font-size:1.5rem;margin-bottom:14px}
+  .modal .price span{display:block;font-family:var(--body);font-weight:400;font-size:.82rem;color:var(--ink-soft)}
+  .modal button.big{width:100%;justify-content:center;font-size:1rem;padding:12px;margin-bottom:8px}
+  .modal button.ghost{width:100%;justify-content:center;background:none;border:0;color:var(--ink-soft)}
+  .modal .fineprint{font-size:.72rem;color:var(--ink-soft);margin:10px 0 0;text-align:center}
+  .modal .pro-on-note{display:none;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px;
+    font-size:.9rem;margin-bottom:12px}
+  .modal.is-pro .pro-on-note{display:block}
+  .modal.is-pro [data-pro-unlock],.modal.is-pro .price,.modal:not(.is-pro) [data-pro-lock]{display:none}
+
+  /* theme menu */
+  .menu{position:absolute;top:calc(100% + 6px);right:16px;z-index:60;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);padding:6px;max-height:320px;overflow:auto;width:220px}
+  .menu button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:none;border-radius:8px;
+    padding:8px 10px;font-size:.88rem}
+  .menu button:hover{background:var(--panel-2)}
+  .menu button.sel{color:var(--accent);font-weight:700}
+  .menu .sw{width:14px;height:14px;border-radius:4px;flex:0 0 auto;border:1px solid rgba(0,0,0,.2)}
+  .menu .hd{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding:8px 10px 4px}
+
   /* AQI gauge */
   .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
   .aqi-num b{font-family:var(--disp);font-weight:700;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
@@ -238,10 +277,33 @@
       <div id="sugg" hidden></div>
     </div>
     <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
+    <button id="teamThemeBtn" class="icon" title="Background theme" aria-label="Background theme">🎨</button>
+    <button id="proBtn" class="icon pro" title="Pro" aria-label="Pro features">Pro</button>
     <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
     <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
+    <div id="themeMenu" hidden></div>
   </div>
 </header>
+
+<div id="proModal" class="modal" hidden>
+  <div class="sheet">
+    <button class="x" data-pro-close aria-label="Close">×</button>
+    <h2>Heartland Weather Desk <span class="pro-tag">Pro</span></h2>
+    <p class="lede">Unlock the outdoor-recreation tools.</p>
+    <div class="pro-on-note">✓ You're on <b>Pro</b> — all outdoor tools are unlocked. Thanks!</div>
+    <ul class="feat">
+      <li>⛳ <b>Golf forecast</b> — tee-time playability &amp; the best window today</li>
+      <li>🎣 <b>Fishing</b> — bite rating &amp; solunar feeding windows</li>
+      <li>🦌 <b>Hunting</b> — deer-movement rating</li>
+      <li>🌙 <b>Moon phase</b> &amp; barometric pressure trend</li>
+    </ul>
+    <div class="price">$19.99<span>per year · or $2.99/mo · 7-day free trial</span></div>
+    <button class="primary big" data-pro-unlock>Start free trial</button>
+    <button class="ghost" data-pro-lock>Turn off Pro (demo)</button>
+    <button class="ghost" data-pro-close>Maybe later</button>
+    <p class="fineprint">Demo unlock on the web. In the iOS / Android app this is a real subscription via the App&nbsp;Store / Google&nbsp;Play.</p>
+  </div>
+</div>
 
 <main class="wrap">
   <div id="holiday" hidden></div>
@@ -290,6 +352,75 @@ function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||
     sync();
     if(_lastPlace) go(_lastPlace);
   });
+})();
+
+/* ================= Pro entitlement ================= */
+function isPro(){ try{ return localStorage.getItem("hwd.pro")==="1"; }catch(e){ return false; } }
+function setPro(v){ try{ localStorage.setItem("hwd.pro", v?"1":"0"); }catch(e){} }
+function updateProBtn(){ const b=$("#proBtn"); if(!b) return; b.classList.toggle("on",isPro()); b.textContent=isPro()?"Pro ✓":"Pro"; }
+function openPro(){ const m=$("#proModal"); m.classList.toggle("is-pro",isPro()); m.hidden=false; }
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-pro-open]")) openPro();
+  if(e.target.closest("#proBtn")) openPro();
+  if(e.target.closest("[data-pro-close]")) $("#proModal").hidden=true;
+  if(e.target.closest("[data-pro-unlock]")){ setPro(true); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
+  if(e.target.closest("[data-pro-lock]")){ setPro(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
+  if(e.target===$("#proModal")) $("#proModal").hidden=true;
+});
+
+/* ================= team / ZIP background theme ================= */
+const TEAM_THEMES={
+  default:{name:"Default (Heartland)",p:"#1f6f8b",s:"#56b6cf"},
+  packers:{name:"Packers",p:"#203731",s:"#FFB612"}, brewers:{name:"Brewers",p:"#12284B",s:"#FFC52F"},
+  bucks:{name:"Bucks",p:"#00471B",s:"#EEE1C6"}, badgers:{name:"Badgers",p:"#C5050C",s:"#9B0000"},
+  vikings:{name:"Vikings",p:"#4F2683",s:"#FFC62F"}, twins:{name:"Twins",p:"#002B5C",s:"#D31145"},
+  wolves:{name:"Timberwolves",p:"#0C2340",s:"#78BE20"}, gophers:{name:"Gophers",p:"#7A0019",s:"#FFCC33"},
+  bears:{name:"Bears",p:"#0B162A",s:"#C83803"}, cubs:{name:"Cubs",p:"#0E3386",s:"#CC3433"},
+  whitesox:{name:"White Sox",p:"#27251F",s:"#C4CED4"}, bulls:{name:"Bulls",p:"#CE1141",s:"#111111"},
+  lions:{name:"Lions",p:"#0076B6",s:"#B0B7BC"}, tigers:{name:"Tigers",p:"#0C2340",s:"#FA4616"},
+  pistons:{name:"Pistons",p:"#1D428A",s:"#C8102E"}, wolverines:{name:"Wolverines",p:"#00274C",s:"#FFCB05"},
+  browns:{name:"Browns",p:"#311D00",s:"#FF3C00"}, guardians:{name:"Guardians",p:"#0C2340",s:"#E31937"},
+  cavaliers:{name:"Cavaliers",p:"#860038",s:"#FDBB30"}, buckeyes:{name:"Buckeyes",p:"#BB0000",s:"#666666"},
+  bengals:{name:"Bengals",p:"#FB4F14",s:"#000000"}, reds:{name:"Reds",p:"#C6011F",s:"#000000"},
+  colts:{name:"Colts",p:"#002C5F",s:"#A2AAAD"}, pacers:{name:"Pacers",p:"#002D62",s:"#FDBB30"},
+  cardinals:{name:"Cardinals",p:"#C41E3A",s:"#0C2340"}, royals:{name:"Royals",p:"#004687",s:"#BD9B60"},
+  chiefs:{name:"Chiefs",p:"#E31837",s:"#FFB81C"}, hawkeyes:{name:"Hawkeyes",p:"#111111",s:"#FFCD00"},
+  huskers:{name:"Cornhuskers",p:"#E41C38",s:"#9aa0a6"}, illini:{name:"Illini",p:"#13294B",s:"#E84A27"}
+};
+function themeSel(){ try{ return localStorage.getItem("hwd.themeTeam")||"auto"; }catch(e){ return "auto"; } }
+function resolveThemeKey(place){
+  const sel=themeSel();
+  if(sel!=="auto") return TEAM_THEMES[sel]?sel:"default";
+  if(place){ const t=teamsFor(place); const k=(t.keys||[]).find(k=>TEAM_THEMES[k]); if(k) return k; }
+  return "default";
+}
+function relLum(c){ return (0.299*c[0]+0.587*c[1]+0.114*c[2])/255; }
+function accentFrom(c){ const target=0.46,l=relLum(c);
+  return l<target ? lerpRGB(c,[255,255,255],Math.min(0.85,(target-l)/(1-l))) : lerpRGB(c,[0,0,0],Math.min(0.85,(l-target)/l)); }
+function applyTheme(place){
+  const key=resolveThemeKey(place||_lastPlace), th=TEAM_THEMES[key]||TEAM_THEMES.default;
+  const p=toRGB(th.p), s=toRGB(th.s), root=document.documentElement.style;
+  if(key==="default"){ root.removeProperty("--accent"); scene.team=null; }
+  else { root.setProperty("--accent", css(accentFrom(p))); scene.team={p,s}; }
+}
+(function(){
+  const btn=$("#teamThemeBtn"), menu=$("#themeMenu");
+  function build(){
+    const sel=themeSel();
+    let html=`<div class="hd">Background theme</div>`;
+    const row=(key,label)=>{ const th=TEAM_THEMES[key]; const sw=th?`<span class="sw" style="background:${th.p}"></span>`:`<span class="sw" style="background:linear-gradient(135deg,#1f6f8b,#56b6cf)"></span>`;
+      return `<button data-theme="${key}" class="${sel===key?'sel':''}">${key==='auto'?'<span class="sw" style="background:linear-gradient(135deg,#888,#ccc)"></span>':sw}${esc(label)}</button>`; };
+    html+=row("auto","Auto — local team");
+    html+=row("default","Default (Heartland)");
+    html+=`<div class="hd">Teams</div>`;
+    Object.keys(TEAM_THEMES).filter(k=>k!=="default").forEach(k=>{ html+=row(k,TEAM_THEMES[k].name); });
+    menu.innerHTML=html; menu.className="menu";
+  }
+  btn.addEventListener("click",e=>{ e.stopPropagation(); if(menu.hidden){ build(); menu.hidden=false; } else menu.hidden=true; });
+  menu.addEventListener("click",e=>{ const b=e.target.closest("button[data-theme]"); if(!b) return;
+    try{ localStorage.setItem("hwd.themeTeam",b.dataset.theme); }catch(err){}
+    menu.hidden=true; applyTheme(_lastPlace); });
+  document.addEventListener("click",e=>{ if(!e.target.closest("#themeMenu") && !e.target.closest("#teamThemeBtn")) menu.hidden=true; });
 })();
 
 /* ================= weather codes ================= */
@@ -484,6 +615,36 @@ function bbqReport(fc,cur){
   else if(feels<=32) smoker="Cold-smoke day — budget extra fuel and time; insulate the cook chamber if you can.";
   else smoker="Great day for low-and-slow — steady air, steady smoke.";
   return {label,vc,why,window,smoker};
+}
+
+/* ================= golf forecast (Pro) ================= */
+function golfReport(fc,cur){
+  const feels=cur.apparent_temperature, wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code;
+  const storm=[95,96,99,82].includes(code), heavy=[65,75,86,63,81].includes(code), wet=[51,53,55,61,80].includes(code);
+  let label,vc,why;
+  if(storm){ label="Clubhouse"; vc="no"; why="Lightning and a bag of irons don't mix. Buy a round inside and wait it out."; }
+  else if(heavy){ label="Rain delay"; vc="no"; why="Course is taking on water — plugged lies and casual water everywhere. Reschedule."; }
+  else if(gust>=35||wind>=28){ label="Brutal wind"; vc="maybe"; why="Club up, aim a fairway over, and forgive yourself early. The wind wins today."; }
+  else if(feels<=38){ label="Bundled bogey golf"; vc="maybe"; why="Cold and stiff — the ball won't fly and neither will you. Hand warmers in the cart."; }
+  else if(feels>=92){ label="Cart & hydrate"; vc="maybe"; why="Hot one. Ride it, drink water, reapply sunscreen, expect a back-nine fade."; }
+  else if(wet){ label="Soft but playable"; vc="maybe"; why="Damp and soft — no roll, lift-clean-place territory. Keep a towel handy."; }
+  else { label="Tee it up"; vc="go"; why="Honest golf weather — manageable wind, dry, comfortable. No excuses on the card today."; }
+  const h=fc.hourly, off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off, todayStr=new Date(nowU).toISOString().slice(0,10);
+  let i=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000); if(i<0) i=0;
+  const scr=k=>{ let s=2;
+    const pp=h.precipitation_probability?h.precipitation_probability[k]:0, c=h.weather_code[k],
+      w=h.wind_speed_10m?h.wind_speed_10m[k]:wind, f=h.apparent_temperature?h.apparent_temperature[k]:feels, day=h.is_day?h.is_day[k]:1;
+    if([95,96,99,82,65,75,86].includes(c)) s-=4; if(pp>=50) s-=3; else if(pp>=30) s-=1;
+    if(w>28) s-=3; else if(w>=18) s-=2; else if(w>=12) s-=1;
+    if(f<40) s-=1; else if(f>=55&&f<=85) s+=1; else if(f>92) s-=1; if(day) s+=1; return s; };
+  let bestA=-1,bestB=-1,curA=-1;
+  for(let k=i;k<h.time.length && h.time[k].slice(0,10)===todayStr;k++){
+    if(scr(k)>=3){ if(curA<0) curA=k; if(bestA<0 || (k-curA)>(bestB-bestA)){ bestA=curA; bestB=k; } } else curA=-1;
+  }
+  let window=null;
+  if(bestA>=0){ const fl=ms=>new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',timeZone:'UTC'});
+    window=fl(Date.parse(h.time[bestA]+"Z"))+"–"+fl(Date.parse(h.time[bestB]+"Z")+3600000); }
+  return {label,vc,why,window,wind:Math.round(wind),gust:Math.round(gust)};
 }
 
 function sportsLines(feels,temp,wind,gust,pop,code){
@@ -966,11 +1127,20 @@ function render(place, fc, air, alerts, sports){
   const rankK=k=>{ const i=ord.indexOf(k); return i<0?99:i; };
   lines.sort((a,b)=>rankK(a.key)-rankK(b.key));
 
-  // field & stream
-  const pInfo=pressureInfo(fc);
-  const sol=solunar(fc, place.lat, place.lon);
-  const fish=fishingReport({feels,wind,code,pressure:pInfo,sol});
-  const hunt=huntingReport({feels,wind,code,pressure:pInfo,sol});
+  // background theme follows the location (or the user's chosen team)
+  applyTheme(place);
+
+  // Pro outdoor tools (golf + field & stream) — gated
+  const pro=isPro();
+  lines=lines.filter(l=>l.key!=="golf"); // golf graduated to the Pro Golf forecast
+  let golf,pInfo,sol,fish,hunt;
+  if(pro){
+    golf=golfReport(fc,cur);
+    pInfo=pressureInfo(fc);
+    sol=solunar(fc, place.lat, place.lon);
+    fish=fishingReport({feels,wind,code,pressure:pInfo,sol});
+    hunt=huntingReport({feels,wind,code,pressure:pInfo,sol});
+  }
 
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
@@ -1026,8 +1196,18 @@ function render(place, fc, air, alerts, sports){
       </div>
     </div>`:""}
 
-    <div class="section-head"><h2>Field &amp; Stream</h2><small>hunting &amp; fishing · solunar</small></div>
-    <div class="grid">
+    <div class="section-head"><h2>Field &amp; Stream</h2><small>golf · hunting · fishing · solunar</small><span class="pro-tag">Pro</span></div>
+    ${pro ? `<div class="grid">
+      <div class="card"><h2>Golf — playability</h2>
+        <div class="verdict ${golf.vc}">${golf.label}</div>
+        <div class="factors">
+          <span class="factor">💨 ${(windDir!=null?compass(windDir)+" ":"")}${golf.wind} mph</span>
+          <span class="factor">🌀 Gusts ${golf.gust}</span>
+          <span class="factor">🌡️ ${Math.round(feels)}° feels</span>
+        </div>
+        <p>${golf.why}</p>
+        <p style="margin-top:8px">${golf.window?`<b>Best tee window:</b> ${golf.window}`:`No clean tee window left today.`}</p></div>
+
       <div class="card"><h2>Fishing — the bite</h2>
         <div class="verdict ${fish.rating.vc}">${fish.rating.label}</div>
         <div class="factors">
@@ -1056,7 +1236,7 @@ function render(place, fc, air, alerts, sports){
           <div class="period"><span class="pk">Dusk window</span><b>${sol.dusk||"—"}</b></div>
         </div>
         <p class="disclaim">Sun ${sol.sun.rise}–${sol.sun.set}. Solunar windows computed from moon position — guides, not gospel.</p></div>
-    </div>
+    </div>` : `<div class="grid">${lockedCard("Field & Stream","Golf tee-time playability, fishing bite & hunting deer-movement ratings, solunar feeding windows, moon phase and the barometric pressure trend — the data that actually predicts the outdoors.")}</div>`}
 
     <div class="section-head"><h2>Today, Hour by Hour</h2><small>next 24 hours</small></div>
     <div class="hours">${hourlyCards(fc)}</div>
@@ -1262,6 +1442,10 @@ function drawGrain(){ if(!_grainC) return; sx.save(); sx.globalAlpha=0.03; sx.gl
   sx.drawImage(_grainC,0,0); sx.restore(); }
 function drawVignette(){ const g=sx.createRadialGradient(W/2,H*0.42,Math.min(W,H)*0.3,W/2,H*0.5,Math.max(W,H)*0.78);
   g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,0.32)"); sx.fillStyle=g; sx.fillRect(0,0,W,H); }
+function drawTeamWash(){ if(!scene.team) return;
+  const g=sx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,css(scene.team.s,0.12)); g.addColorStop(.5,css(scene.team.s,0)); g.addColorStop(1,css(scene.team.p,0.18));
+  sx.fillStyle=g; sx.fillRect(0,0,W,H); }
 
 function frame(){
   if(!W){ requestAnimationFrame(frame); return; }
@@ -1301,7 +1485,7 @@ function frame(){
   if(L.holi.length){ for(const b of L.holi){ sx.font=b.size+"px serif"; sx.textAlign="center"; sx.fillText(b.ch,b.x,b.y);
     if(!REDUCED){ b.p+=0.02; b.y+=b.sp; b.x+=Math.sin(b.p)*b.dr; if(b.y>H+20){ b.y=-20; b.x=rand(0,W); } } } sx.textAlign="start"; }
 
-  drawVignette(); drawGrain();
+  drawTeamWash(); drawVignette(); drawGrain();
   if(!REDUCED) requestAnimationFrame(frame);
 }
 
@@ -1313,7 +1497,9 @@ if(REDUCED){ // draw a few static frames so motion settles, then stop
 
 /* ================= boot ================= */
 (function(){
+  updateProBtn();
   const saved=loadPlace();
+  applyTheme(saved||null);
   go(saved || {name:"De Pere",admin1:"Wisconsin",country:"US",lat:44.4489,lon:-88.0604,label:"De Pere, Wisconsin, US"});
 })();
 </script>
