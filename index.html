@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Heartland Weather Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,8 +31,9 @@
   }
 
   *{box-sizing:border-box}
-  html{background:var(--bg)}
-  body{background:transparent;color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
+  [hidden]{display:none!important}
+  html{background:var(--bg);margin:0}
+  body{margin:0;background:transparent;color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
   #sky{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
   .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
 
