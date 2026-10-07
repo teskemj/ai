@@ -1058,7 +1058,7 @@ let _lastPlace=null;
 function sportsEnabled(){ try{ return localStorage.getItem("hwd.sports")!=="off"; }catch(e){ return true; } }
 
 async function go(place){
-  savePlace(place); _lastPlace=place; $("#q").value="";
+  savePlace(place); _lastPlace=place; rememberLocation(place); $("#q").value="";
   showMsg('<span class="spin"></span>&nbsp;&nbsp;Reading the clouds over '+esc(place.name||"there")+"…",true);
   alertsEl.hidden=true; alertsEl.innerHTML="";
   const {lat,lon}=place;
@@ -1537,9 +1537,44 @@ if(REDUCED){ // draw a few static frames so motion settles, then stop
   let k=0; (function step(){ frame(); if(k++<3) setTimeout(step,0); })();
 } else { requestAnimationFrame(frame); }
 
+/* ================= severe-weather push (native app only) =================
+   On web this is inert. In the Capacitor app it registers for push and tells
+   the backend which locations to watch. Set PUSH_ENDPOINT to your deployed
+   register function (see server/weather-alerts + PUSH.md). */
+const PUSH_ENDPOINT=""; // e.g. "https://us-central1-<project>.cloudfunctions.net/registerDevice"
+let _pushToken=null;
+function savedLocations(){ try{ return JSON.parse(localStorage.getItem("hwd.locs")||"[]"); }catch(e){ return []; } }
+function rememberLocation(p){
+  if(!p||typeof p.lat!=="number") return;
+  try{ const max=isPro()?10:1, l=savedLocations().filter(x=>x.label!==p.label);
+    l.unshift({label:p.label,lat:p.lat,lon:p.lon}); localStorage.setItem("hwd.locs",JSON.stringify(l.slice(0,max))); }catch(e){}
+  if(_pushToken) registerDevice(_pushToken);
+}
+async function registerDevice(token){
+  if(!PUSH_ENDPOINT || !premiumUnlocked()) return;
+  const platform=(window.Capacitor&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform())||"unknown";
+  try{ await fetch(PUSH_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({token,platform,locations:savedLocations()})}); }catch(e){ console.warn("registerDevice",e); }
+}
+async function initPush(){
+  const C=window.Capacitor;
+  if(!C || !C.isNativePlatform || !C.isNativePlatform()) return; // web: no-op
+  const P=C.Plugins||{}, Push=P.PushNotifications, Local=P.LocalNotifications;
+  if(!Push) return;
+  try{
+    let perm=await Push.checkPermissions(); if(perm.receive!=="granted") perm=await Push.requestPermissions();
+    if(perm.receive!=="granted") return;
+    Push.addListener("registration", t=>{ _pushToken=t.value; registerDevice(t.value); });
+    Push.addListener("pushNotificationReceived", n=>{ // show while app is foregrounded
+      if(Local) Local.schedule({notifications:[{id:Date.now()%100000,title:n.title||"Weather alert",body:n.body||""}]}); });
+    await Push.register();
+  }catch(e){ console.warn("initPush",e); }
+}
+
 /* ================= boot ================= */
 (function(){
   if(DEMO){ const pb=$("#proBtn"); if(pb) pb.style.display="none"; }
+  initPush();
   firstSeen();      // start the 14-day reverse trial on first visit
   updateProBtn();
   const saved=loadPlace();

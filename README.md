@@ -39,8 +39,9 @@ everything unlocked with no paywall UI — for demos, investors, or store review
 
 ## Mobile apps (iOS + Android)
 The same `index.html` is wrapped with Capacitor. See **[CAPACITOR.md](CAPACITOR.md)**
-to build and run, and **[STORE_LAUNCH.md](STORE_LAUNCH.md)** for the data-licensing
-requirements and the full App Store / Google Play submission checklist.
+to build and run, **[STORE_LAUNCH.md](STORE_LAUNCH.md)** for the data-licensing
+requirements and the full App Store / Google Play submission checklist, and
+**[PUSH.md](PUSH.md)** for severe-weather push alerts (client + `server/weather-alerts/`).
 
 > `index.html` at the repo root is the single source of truth (web + app).
 > Run `npm run sync:web` to copy it into `www/` before a Capacitor build.
