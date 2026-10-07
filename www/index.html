@@ -1704,8 +1704,7 @@ async function initPush(){
 }
 
 /* ================= radar & weather maps ================= */
-const OWM_KEY=""; // optional: a free OpenWeatherMap key (openweathermap.org) enables the Wind layer
-let _map=null,_base=null,_overlay=null,_marker=null,_frames=[],_sat=[],_pastCount=0,_frameIdx=0,_playing=false,_playTimer=null,_curLayer="precip";
+let _map=null,_base=null,_overlay=null,_marker=null,_frames=[],_sat=[],_pastCount=0,_frameIdx=0,_playing=false,_playTimer=null,_curLayer="precip",_windT=null;
 function isDarkTheme(){ const r=document.documentElement.getAttribute("data-theme");
   return r==="dark"||(!r&&window.matchMedia("(prefers-color-scheme:dark)").matches); }
 function setBase(){
@@ -1749,15 +1748,40 @@ function selectLayer(kind){
     const f=_sat.length?_sat[_sat.length-1]:null;
     if(f){ _overlay=window.L.tileLayer(f.url,{opacity:0.68,maxZoom:12,zIndex:400}).addTo(_map); note.textContent="Cloud cover · infrared satellite (RainViewer)"; }
     else note.textContent="Cloud layer unavailable right now.";
-  } else { if(bottom) bottom.style.display="none";
-    if(OWM_KEY){ _overlay=window.L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`,{opacity:0.7,maxZoom:12,zIndex:400}).addTo(_map); note.textContent="Wind · OpenWeatherMap"; }
-    else note.textContent="Wind layer needs a free OpenWeatherMap key — set OWM_KEY in the code.";
-  }
+  } else { if(bottom) bottom.style.display="none"; windLayer(); }
 }
+function windColor(ms){ // speed in m/s
+  if(ms<2) return "#8aa0b0"; if(ms<5) return "#36a0c8"; if(ms<8) return "#2ea06a";
+  if(ms<11) return "#c9b020"; if(ms<15) return "#d98326"; return "#d8463a";
+}
+async function windLayer(){
+  const note=$("#mapNote"); note.textContent="Loading wind…";
+  const bs=_map.getBounds(), cols=9, rows=7, n=bs.getNorth(), s=bs.getSouth(), w=bs.getWest(), e=bs.getEast();
+  const lats=[],lons=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ lats.push((s+(n-s)*(r+0.5)/rows).toFixed(3)); lons.push((w+(e-w)*(c+0.5)/cols).toFixed(3)); }
+  let data;
+  try{ data=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lats.join(",")}&longitude=${lons.join(",")}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=UTC`); }
+  catch(err){ note.textContent="Wind data unavailable right now."; return; }
+  if(_curLayer!=="wind") return; // user switched away while loading
+  const arr=Array.isArray(data)?data:[data], grp=window.L.layerGroup();
+  const Ld=Math.min((n-s)/rows,(e-w)/cols)*0.42;
+  arr.forEach((d,i)=>{ const cur=d&&d.current; if(!cur) return;
+    const lat=+lats[i], lon=+lons[i], spd=cur.wind_speed_10m||0, toB=((cur.wind_direction_10m||0)+180)*Math.PI/180;
+    const col=windColor(spd), wt=spd>=11?2.4:1.8, coslat=Math.max(0.2,Math.cos(lat*Math.PI/180));
+    const tip=[lat+Ld*Math.cos(toB), lon+Ld*Math.sin(toB)/coslat];
+    window.L.polyline([[lat,lon],tip],{color:col,weight:wt,opacity:.92}).addTo(grp);
+    for(const a of [150,-150]){ const b=toB+a*Math.PI/180, hl=Ld*0.4;
+      window.L.polyline([tip,[tip[0]+hl*Math.cos(b), tip[1]+hl*Math.sin(b)/coslat]],{color:col,weight:wt,opacity:.92}).addTo(grp); }
+  });
+  if(_overlay) _map.removeLayer(_overlay);
+  _overlay=grp.addTo(_map);
+  note.textContent="Wind · arrows point downwind, color = speed (Open-Meteo)";
+}
+function scheduleWindRefresh(){ if(_curLayer!=="wind"||!_map) return; clearTimeout(_windT); _windT=setTimeout(()=>{ if(_curLayer==="wind") windLayer(); },500); }
 async function openRadar(){
   const m=$("#radarModal"); m.hidden=false;
   if(!window.L){ $("#mapNote").textContent="Map library didn't load — check your connection."; return; }
-  if(!_map){ _map=window.L.map("map",{zoomControl:true}).setView([44.45,-88.06],7); setBase(); }
+  if(!_map){ _map=window.L.map("map",{zoomControl:true}).setView([44.45,-88.06],7); setBase(); _map.on("moveend zoomend",scheduleWindRefresh); }
   const p=_lastPlace||{lat:44.4489,lon:-88.0604};
   _map.setView([p.lat,p.lon],7);
   if(!_marker) _marker=window.L.circleMarker([p.lat,p.lon],{radius:6,color:"#fff",weight:2,fillColor:"#1f6f8b",fillOpacity:1});
