@@ -232,6 +232,7 @@
   .layer-sel button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
   #map{flex:1;min-height:0;background:var(--panel-2)}
   #map .leaflet-control-attribution{font-size:9px}
+  #map.mapdark .leaflet-basemap-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
   .radar-bottom{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
   #timeline{flex:1;min-width:0;accent-color:var(--accent)}
   .tl-label{font-family:var(--mono);font-size:.7rem;color:var(--ink-soft);min-width:72px;text-align:right}
@@ -1706,11 +1707,15 @@ async function initPush(){
 /* ================= radar & weather maps ================= */
 const OWM_KEY=""; // optional: a free OpenWeatherMap key (openweathermap.org) enables the Wind layer
 let _map=null,_base=null,_overlay=null,_marker=null,_frames=[],_sat=[],_pastCount=0,_frameIdx=0,_playing=false,_playTimer=null,_curLayer="precip";
-function baseStyle(){ const r=document.documentElement.getAttribute("data-theme");
-  const dark=r==="dark"||(!r&&window.matchMedia("(prefers-color-scheme:dark)").matches); return dark?"dark_all":"light_all"; }
-function setBase(){ if(_base) _map.removeLayer(_base);
-  _base=window.L.tileLayer(`https://{s}.basemaps.cartocdn.com/${baseStyle()}/{z}/{x}/{y}{r}.png`,
-    {subdomains:"abcd",maxZoom:18,attribution:"&copy; OpenStreetMap &copy; CARTO"}).addTo(_map); }
+function isDarkTheme(){ const r=document.documentElement.getAttribute("data-theme");
+  return r==="dark"||(!r&&window.matchMedia("(prefers-color-scheme:dark)").matches); }
+function setBase(){
+  if(!_map.getPane("basemap")){ _map.createPane("basemap"); _map.getPane("basemap").style.zIndex="150"; }
+  if(_base) _map.removeLayer(_base);
+  _base=window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {subdomains:"abc",maxZoom:19,pane:"basemap",attribution:"&copy; OpenStreetMap contributors"}).addTo(_map);
+  const el=document.getElementById("map"); if(el) el.classList.toggle("mapdark",isDarkTheme());
+}
 async function loadRadarFrames(){
   try{
     const d=await getJSON("https://api.rainviewer.com/public/weather-maps.json"), host=d.host;
