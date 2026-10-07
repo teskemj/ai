@@ -179,8 +179,9 @@
   .lockbtns{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
   .ghostbtn{background:none;border:1px solid var(--line);color:var(--ink-soft)}
   .ghostbtn:hover{border-color:var(--accent);color:var(--ink)}
-  .preview-note{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;
+  .preview-note,.trial-note{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;
     border-radius:12px;background:var(--amber-bg);border:1px solid var(--amber);font-size:.9rem}
+  .trial-note{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border-color:var(--accent)}
   .linkbtn{background:none;border:0;color:var(--accent);font-weight:700;padding:0;text-decoration:underline;cursor:pointer}
   .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;
     background:rgba(8,12,18,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
@@ -304,8 +305,8 @@
       <li>🦌 <b>Hunting</b> — deer-movement rating, moon &amp; pressure</li>
       <li>🎨 <b>Team backgrounds</b> — set any team's colors by hand</li>
     </ul>
-    <div class="price">$19.99<span>per year · or $2.99/mo · 7-day free trial</span></div>
-    <button class="primary big" data-pro-unlock>Start free trial</button>
+    <div class="price">$19.99<span>per year · or $2.99/mo · 7-day free trial, cancel anytime</span></div>
+    <button class="primary big" data-pro-unlock>Keep Premium</button>
     <button class="ghost" data-pro-preview>Just preview it (no purchase)</button>
     <button class="ghost" data-pro-lock>Turn off Premium (demo)</button>
     <button class="ghost" data-pro-close>Maybe later</button>
@@ -367,8 +368,16 @@ function isPro(){ try{ return localStorage.getItem("hwd.pro")==="1"; }catch(e){ 
 function setPro(v){ try{ localStorage.setItem("hwd.pro", v?"1":"0"); }catch(e){} }
 function isPreview(){ try{ return sessionStorage.getItem("hwd.preview")==="1"; }catch(e){ return false; } }
 function setPreview(v){ try{ v?sessionStorage.setItem("hwd.preview","1"):sessionStorage.removeItem("hwd.preview"); }catch(e){} }
-function premiumUnlocked(){ return isPro()||isPreview(); }
-function updateProBtn(){ const b=$("#proBtn"); if(!b) return; b.classList.toggle("on",isPro()); b.textContent=isPro()?"Premium ✓":"Premium"; }
+/* Reverse trial: every new visitor gets full access for TRIAL_DAYS, then free tier. */
+const TRIAL_DAYS=7;
+function firstSeen(){ try{ let v=localStorage.getItem("hwd.first"); if(!v){ v=String(Date.now()); localStorage.setItem("hwd.first",v); } return +v; }catch(e){ return Date.now(); } }
+function trialMsLeft(){ return TRIAL_DAYS*86400000 - (Date.now()-firstSeen()); }
+function inTrial(){ return !isPro() && trialMsLeft()>0; }
+function trialDaysLeft(){ return Math.max(1, Math.ceil(trialMsLeft()/86400000)); }
+function premiumUnlocked(){ return isPro()||inTrial()||isPreview(); }
+function updateProBtn(){ const b=$("#proBtn"); if(!b) return; const pro=isPro(); b.classList.toggle("on",pro);
+  b.textContent=pro?"Premium ✓":"Premium";
+  b.title=pro?"Premium active":(inTrial()?`Premium trial — ${trialDaysLeft()} days left`:"Premium"); }
 function openPro(){ const m=$("#proModal"); m.classList.toggle("is-pro",isPro()); m.hidden=false; }
 document.addEventListener("click",e=>{
   if(e.target.closest("[data-pro-open]")) openPro();
@@ -1170,7 +1179,11 @@ function render(place, fc, air, alerts, sports){
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
   content.innerHTML=`
-    ${(isPreview() && !isPro())?`<div class="preview-note">🔓 <b>Preview mode</b> — you're seeing Premium features. <button class="linkbtn" data-pro-open>Unlock Premium</button></div>`:""}
+    ${ isPro() ? "" : inTrial()
+        ? `<div class="trial-note">✨ <b>Premium trial</b> — ${trialDaysLeft()} day${trialDaysLeft()===1?"":"s"} left, everything unlocked. <button class="linkbtn" data-pro-open>Keep Premium</button></div>`
+        : isPreview()
+        ? `<div class="preview-note">🔓 <b>Preview mode</b> — you're seeing Premium features. <button class="linkbtn" data-pro-open>Unlock Premium</button></div>`
+        : "" }
     <section class="hero">
       <div class="hero-grid">
         <div class="glyph" aria-hidden="true">${glyph}</div>
@@ -1524,6 +1537,7 @@ if(REDUCED){ // draw a few static frames so motion settles, then stop
 
 /* ================= boot ================= */
 (function(){
+  firstSeen();      // start the 7-day reverse trial on first visit
   updateProBtn();
   const saved=loadPlace();
   applyTheme(saved||null);
