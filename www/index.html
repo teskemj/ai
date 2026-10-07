@@ -176,6 +176,12 @@
   .card.locked .lockicon{font-size:1.8rem}
   .card.locked h2{font-family:var(--disp);font-weight:700;font-size:1.15rem;letter-spacing:-.01em;color:var(--ink);margin:6px 0 4px;text-transform:none}
   .card.locked p{margin:0 0 12px}
+  .lockbtns{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .ghostbtn{background:none;border:1px solid var(--line);color:var(--ink-soft)}
+  .ghostbtn:hover{border-color:var(--accent);color:var(--ink)}
+  .preview-note{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;
+    border-radius:12px;background:var(--amber-bg);border:1px solid var(--amber);font-size:.9rem}
+  .linkbtn{background:none;border:0;color:var(--accent);font-weight:700;padding:0;text-decoration:underline;cursor:pointer}
   .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;
     background:rgba(8,12,18,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
   .modal .sheet{position:relative;width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
@@ -300,7 +306,8 @@
     </ul>
     <div class="price">$19.99<span>per year · or $2.99/mo · 7-day free trial</span></div>
     <button class="primary big" data-pro-unlock>Start free trial</button>
-    <button class="ghost" data-pro-lock>Turn off Pro (demo)</button>
+    <button class="ghost" data-pro-preview>Just preview it (no purchase)</button>
+    <button class="ghost" data-pro-lock>Turn off Premium (demo)</button>
     <button class="ghost" data-pro-close>Maybe later</button>
     <p class="fineprint">Demo unlock on the web. In the iOS / Android app this is a real subscription via the App&nbsp;Store / Google&nbsp;Play.</p>
   </div>
@@ -358,14 +365,18 @@ function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||
 /* ================= Pro entitlement ================= */
 function isPro(){ try{ return localStorage.getItem("hwd.pro")==="1"; }catch(e){ return false; } }
 function setPro(v){ try{ localStorage.setItem("hwd.pro", v?"1":"0"); }catch(e){} }
+function isPreview(){ try{ return sessionStorage.getItem("hwd.preview")==="1"; }catch(e){ return false; } }
+function setPreview(v){ try{ v?sessionStorage.setItem("hwd.preview","1"):sessionStorage.removeItem("hwd.preview"); }catch(e){} }
+function premiumUnlocked(){ return isPro()||isPreview(); }
 function updateProBtn(){ const b=$("#proBtn"); if(!b) return; b.classList.toggle("on",isPro()); b.textContent=isPro()?"Premium ✓":"Premium"; }
 function openPro(){ const m=$("#proModal"); m.classList.toggle("is-pro",isPro()); m.hidden=false; }
 document.addEventListener("click",e=>{
   if(e.target.closest("[data-pro-open]")) openPro();
   if(e.target.closest("#proBtn")) openPro();
   if(e.target.closest("[data-pro-close]")) $("#proModal").hidden=true;
-  if(e.target.closest("[data-pro-unlock]")){ setPro(true); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
-  if(e.target.closest("[data-pro-lock]")){ setPro(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
+  if(e.target.closest("[data-pro-preview]")){ setPreview(true); $("#proModal").hidden=true; if(_lastPlace) go(_lastPlace); }
+  if(e.target.closest("[data-pro-unlock]")){ setPro(true); setPreview(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
+  if(e.target.closest("[data-pro-lock]")){ setPro(false); setPreview(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
   if(e.target===$("#proModal")) $("#proModal").hidden=true;
 });
 
@@ -392,7 +403,7 @@ function themeSel(){ try{ return localStorage.getItem("hwd.themeTeam")||"auto"; 
 function resolveThemeKey(place){
   let sel=themeSel();
   // picking a specific team is Premium; free users fall back to Auto (still colored by ZIP)
-  if(sel!=="auto" && sel!=="default" && !isPro()) sel="auto";
+  if(sel!=="auto" && sel!=="default" && !premiumUnlocked()) sel="auto";
   if(sel!=="auto") return TEAM_THEMES[sel]?sel:"default";
   if(place){ const t=teamsFor(place); const k=(t.keys||[]).find(k=>TEAM_THEMES[k]); if(k) return k; }
   return "default";
@@ -409,7 +420,7 @@ function applyTheme(place){
 (function(){
   const btn=$("#teamThemeBtn"), menu=$("#themeMenu");
   function build(){
-    const sel=themeSel(), pro=isPro();
+    const sel=themeSel(), pro=premiumUnlocked();
     let html=`<div class="hd">Background theme</div>`;
     const row=(key,label,lock)=>{ const th=TEAM_THEMES[key];
       const sw=key==='auto'?`<span class="sw" style="background:linear-gradient(135deg,#888,#ccc)"></span>`
@@ -657,7 +668,8 @@ function golfReport(fc,cur){
 function lockedCard(title,blurb){
   return `<div class="card locked"><div class="lockwrap"><span class="lockicon">🔒</span>
     <h2>${esc(title)} <span class="pro-tag">Premium</span></h2><p>${esc(blurb)}</p>
-    <button class="primary" data-pro-open>Unlock Premium</button></div></div>`;
+    <div class="lockbtns"><button class="primary" data-pro-open>Unlock Premium</button>
+    <button class="ghostbtn" data-pro-preview>Preview it</button></div></div></div>`;
 }
 
 function sportsLines(feels,temp,wind,gust,pop,code){
@@ -1106,7 +1118,7 @@ function render(place, fc, air, alerts, sports){
 
   const vq=verdict(feels,pop0,wind,gust,aqi,code,tier);
   const wear=dressFor(feels,pop0,wind,uv0,code);
-  const pro=isPro();
+  const pro=premiumUnlocked();
   const bbq=pro?bbqReport(fc,cur):null;
   const cat=aqiCat(aqi);
   const aqiPct = aqi==null?0:Math.max(2,Math.min(100,(aqi/400)*100));
@@ -1158,6 +1170,7 @@ function render(place, fc, air, alerts, sports){
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
   content.innerHTML=`
+    ${(isPreview() && !isPro())?`<div class="preview-note">🔓 <b>Preview mode</b> — you're seeing Premium features. <button class="linkbtn" data-pro-open>Unlock Premium</button></div>`:""}
     <section class="hero">
       <div class="hero-grid">
         <div class="glyph" aria-hidden="true">${glyph}</div>
