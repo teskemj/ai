@@ -13,11 +13,13 @@
     "add:android": "cap add android",
     "open:ios": "cap open ios",
     "open:android": "cap open android",
+    "build:purchases": "esbuild src/purchases.src.js --bundle --format=iife --minify --outfile=purchases.js",
     "assets": "capacitor-assets generate"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
     "@capacitor/app": "^6.0.1",
+    "@revenuecat/purchases-capacitor": "^9.0.0",
     "@capacitor/core": "^6.1.2",
     "@capacitor/filesystem": "^6.0.1",
     "@capacitor/geolocation": "^6.0.1",
@@ -31,6 +33,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^6.1.2"
+    "@capacitor/cli": "^6.1.2",
+    "esbuild": "^0.24.0"
   }
 }

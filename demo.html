@@ -192,6 +192,7 @@
     border-radius:12px;background:var(--amber-bg);border:1px solid var(--amber);font-size:.9rem}
   .trial-note{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border-color:var(--accent)}
   .linkbtn{background:none;border:0;color:var(--accent);font-weight:700;padding:0;text-decoration:underline;cursor:pointer}
+  #proModal{z-index:120}
   .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;
     background:rgba(8,12,18,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
   .modal .sheet{position:relative;width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
@@ -333,6 +334,7 @@
     </ul>
     <div class="price">$19.99<span>per year · or $2.99/mo · 14-day free trial, cancel anytime</span></div>
     <button class="primary big" data-pro-unlock>Keep Premium</button>
+    <button class="ghost" data-pro-restore>Restore purchase</button>
     <button class="ghost" data-pro-preview>Just preview it (no purchase)</button>
     <button class="ghost" data-pro-lock>Turn off Premium (demo)</button>
     <button class="ghost" data-pro-close>Maybe later</button>
@@ -376,6 +378,7 @@
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="purchases.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
@@ -430,12 +433,19 @@ function updateProBtn(){ const b=$("#proBtn"); if(!b) return; const pro=isPro();
   b.textContent=pro?"Premium ✓":"Premium";
   b.title=pro?"Premium active":(inTrial()?`Premium trial — ${trialDaysLeft()} days left`:"Premium"); }
 function openPro(){ const m=$("#proModal"); m.classList.toggle("is-pro",isPro()); m.hidden=false; }
+const RC_API_KEY_IOS="";      // RevenueCat public SDK key (Apple) — set for the iOS build
+const RC_API_KEY_ANDROID="";  // RevenueCat public SDK key (Google) — set for the Android build
+function _isNative(){ return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
 document.addEventListener("click",e=>{
   if(e.target.closest("[data-pro-open]")) openPro();
   if(e.target.closest("#proBtn")) openPro();
   if(e.target.closest("[data-pro-close]")) $("#proModal").hidden=true;
   if(e.target.closest("[data-pro-preview]")){ setPreview(true); $("#proModal").hidden=true; if(_lastPlace) go(_lastPlace); }
-  if(e.target.closest("[data-pro-unlock]")){ setPro(true); setPreview(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
+  if(e.target.closest("[data-pro-unlock]")){
+    if(_isNative() && window.HWDPurchases){ window.HWDPurchases.purchase().then(ok=>{ $("#proModal").hidden=true; updateProBtn(); if(ok&&_lastPlace) go(_lastPlace); }); }
+    else { setPro(true); setPreview(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); } // demo unlock on web
+  }
+  if(e.target.closest("[data-pro-restore]")){ if(window.HWDPurchases) window.HWDPurchases.restore().then(()=>{ $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }); }
   if(e.target.closest("[data-pro-lock]")){ setPro(false); setPreview(false); $("#proModal").hidden=true; updateProBtn(); if(_lastPlace) go(_lastPlace); }
   if(e.target===$("#proModal")) $("#proModal").hidden=true;
 });
@@ -1723,6 +1733,7 @@ function showFrame(i){
 function stopPlay(){ _playing=false; if(_playTimer) clearInterval(_playTimer); _playTimer=null; const b=$("#playBtn"); if(b) b.textContent="▶"; }
 function playRadar(){ if(_playing||!_frames.length) return; _playing=true; const b=$("#playBtn"); if(b) b.textContent="⏸"; _playTimer=setInterval(()=>showFrame(_frameIdx+1),600); }
 function selectLayer(kind){
+  if((kind==="clouds"||kind==="wind") && !premiumUnlocked()){ openPro(); return; } // Premium layers
   _curLayer=kind; stopPlay();
   document.querySelectorAll("[data-layer]").forEach(b=>b.classList.toggle("sel",b.dataset.layer===kind));
   if(_overlay){ _map.removeLayer(_overlay); _overlay=null; }
@@ -1748,6 +1759,11 @@ async function openRadar(){
   if(!_marker) _marker=window.L.circleMarker([p.lat,p.lon],{radius:6,color:"#fff",weight:2,fillColor:"#1f6f8b",fillOpacity:1});
   _marker.setLatLng([p.lat,p.lon]).addTo(_map);
   setTimeout(()=>_map.invalidateSize(),80);
+  const lock=!premiumUnlocked();
+  document.querySelectorAll("[data-layer]").forEach(b=>{ const k=b.dataset.layer;
+    const base=k==="precip"?"Precip":(k==="clouds"?"Clouds":"Wind");
+    b.textContent=(lock&&k!=="precip")?base+" 🔒":base; });
+  if(lock && _curLayer!=="precip") _curLayer="precip";
   if(!_frames.length && !_sat.length) await loadRadarFrames();
   selectLayer(_curLayer);
 }
@@ -1765,6 +1781,9 @@ async function openRadar(){
 /* ================= boot ================= */
 (function(){
   if(DEMO){ const pb=$("#proBtn"); if(pb) pb.style.display="none"; }
+  window.addEventListener("hwd-entitlement", ()=>{ updateProBtn(); if(_lastPlace) go(_lastPlace); });
+  if(_isNative() && window.HWDPurchases){ const plat=window.Capacitor.getPlatform();
+    const key=plat==="ios"?RC_API_KEY_IOS:RC_API_KEY_ANDROID; if(key) window.HWDPurchases.configure(key); }
   initPush();
   firstSeen();      // start the 14-day reverse trial on first visit
   updateProBtn();
