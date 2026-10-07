@@ -92,7 +92,7 @@
   details.alert summary::-webkit-details-marker{display:none}
 
   /* Hero (glass over the sky) */
-  .hero{background:var(--glass);-webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
+  .hero{position:relative;background:var(--glass);-webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
     border:1px solid var(--glass-brd);border-radius:20px;box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
   .hero-grid{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
   .place{font-family:var(--disp);font-weight:600;font-size:1.25rem;letter-spacing:-.01em}
@@ -109,6 +109,10 @@
     padding:8px 12px;min-width:92px}
   .chip .k{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
   .chip .v{font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums;margin-top:2px}
+  .sharebtn{position:absolute;top:16px;right:16px;font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;
+    text-transform:uppercase;font-weight:700;padding:7px 12px;border-radius:999px;background:var(--accent);
+    border-color:var(--accent);color:#fff}
+  .sharebtn:hover{filter:brightness(1.06)}
   .quip{margin-top:16px;padding:14px 16px;border-left:3px solid var(--accent);background:var(--panel-2);
     border-radius:0 10px 10px 0;font-size:.98rem}
   .quip b{font-family:var(--disp)}
@@ -1180,6 +1184,13 @@ function render(place, fc, air, alerts, sports){
   }
 
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
+  _snap={
+    place: place.admin1 ? `${place.name}, ${place.admin1}` : (place.name||"Your location"),
+    dateline: now.toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"})+" · "+now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
+    tempR: Math.round(temp), feelsR: Math.round(feels), cond: condLabel, glyph,
+    verdict: vq.title, quip: heroQuip(feels,temp,hum,wind,code,isDay).replace(/<[^>]+>/g,""),
+    alert: alerts.length ? {event:alerts[0].event, headline:(alerts[0].headline||"")} : null
+  };
 
   content.innerHTML=`
     ${ (DEMO||isPro()) ? "" : inTrial()
@@ -1198,6 +1209,7 @@ function render(place, fc, air, alerts, sports){
           <div class="feels">Feels like ${Math.round(feels)}°</div>
         </div>
       </div>
+      <button class="sharebtn" data-share aria-label="Share this forecast">📤 Share</button>
       <div class="nowstats">
         ${chip("Humidity",hum+"%")}${chip("Wind",(windDir!=null?compass(windDir)+" ":"")+Math.round(wind)+" mph")}${chip("Gusts",Math.round(gust)+" mph")}
         ${chip("Rain today",Math.round(pop0)+"%")}${chip("UV index",Math.round(uv0))}${chip("Air (AQI)", aqi==null?"—":Math.round(aqi))}
@@ -1537,6 +1549,71 @@ resize();
 if(REDUCED){ // draw a few static frames so motion settles, then stop
   let k=0; (function step(){ frame(); if(k++<3) setTimeout(step,0); })();
 } else { requestAnimationFrame(frame); }
+
+/* ================= shareable forecast / alert card ================= */
+let _snap=null;
+function _round(x,a,b,w,h,r){ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r);
+  x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); }
+function _wrap(x,text,px,py,maxW,lh,maxLines){
+  const words=String(text||"").split(/\s+/); let line="",y=py,n=1;
+  for(const w of words){ const t=line?line+" "+w:w;
+    if(x.measureText(t).width>maxW && line){
+      if(n>=maxLines){ let s=line; while(s.length&&x.measureText(s+"…").width>maxW) s=s.slice(0,-1); x.fillText(s+"…",px,y); return y; }
+      x.fillText(line,px,y); y+=lh; line=w; n++;
+    } else line=t;
+  }
+  x.fillText(line,px,y); return y;
+}
+function buildCard(){
+  const S=1080, c=document.createElement("canvas"); c.width=S; c.height=S; const x=c.getContext("2d");
+  const team=scene.team, p=team?team.p:[15,19,27], acc=team?team.s:[86,182,207];
+  const g=x.createLinearGradient(0,0,0,S); g.addColorStop(0,css(lerpRGB(p,[0,0,0],0.12))); g.addColorStop(1,css(lerpRGB(p,[0,0,0],0.55)));
+  x.fillStyle=g; x.fillRect(0,0,S,S);
+  const rg=x.createRadialGradient(S*0.8,S*0.12,0,S*0.8,S*0.12,S*0.62); rg.addColorStop(0,css(acc,0.28)); rg.addColorStop(1,css(acc,0));
+  x.fillStyle=rg; x.fillRect(0,0,S,S);
+  const s=_snap||{place:"Heartland Weather Desk",dateline:"",tempR:"—",feelsR:"—",cond:"",glyph:"🌡️",verdict:"",quip:"",alert:null};
+  const pad=84;
+  x.fillStyle=css(acc); x.font="700 32px 'IBM Plex Mono',monospace"; x.fillText("HEARTLAND WEATHER DESK",pad,108);
+  x.fillStyle="#fff"; x.font="700 60px 'IBM Plex Sans',sans-serif"; x.fillText(s.place.slice(0,34),pad,188);
+  x.fillStyle="rgba(255,255,255,.7)"; x.font="400 30px 'IBM Plex Sans',sans-serif"; x.fillText(s.dateline,pad,236);
+  x.font="160px serif"; x.textAlign="right"; x.fillText(s.glyph,S-pad,452); x.textAlign="left";
+  x.fillStyle="#fff"; x.font="700 230px 'IBM Plex Sans',sans-serif"; x.fillText(s.tempR+"°",pad,500);
+  x.fillStyle="rgba(255,255,255,.92)"; x.font="500 42px 'IBM Plex Sans',sans-serif"; x.fillText(s.cond+" · feels "+s.feelsR+"°",pad,560);
+  let yy=636;
+  if(s.alert){ x.fillStyle="rgba(194,59,46,.96)"; _round(x,pad,yy,S-2*pad,138,18); x.fill();
+    x.fillStyle="#fff"; x.font="700 40px 'IBM Plex Sans',sans-serif"; x.fillText(("⚠ "+s.alert.event).slice(0,34),pad+30,yy+56);
+    x.font="400 27px 'IBM Plex Sans',sans-serif"; _wrap(x,s.alert.headline,pad+30,yy+96,S-2*pad-60,32,1); yy+=176; }
+  else { x.fillStyle=css(acc,0.2); _round(x,pad,yy,S-2*pad,100,18); x.fill();
+    x.fillStyle=css(acc); x.font="700 44px 'IBM Plex Sans',sans-serif"; x.fillText(s.verdict,pad+30,yy+64); yy+=140; }
+  x.fillStyle="rgba(255,255,255,.9)"; x.font="400 36px 'IBM Plex Sans',sans-serif";
+  _wrap(x,s.quip,pad,yy+42,S-2*pad,48,4);
+  x.fillStyle="rgba(255,255,255,.58)"; x.font="400 25px 'IBM Plex Mono',monospace";
+  x.fillText("teskemj.github.io/ai · data: NWS + Open-Meteo",pad,S-56);
+  return c;
+}
+async function shareCard(){
+  try{ if(document.fonts&&document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const c=buildCard();
+  const blob=await new Promise(r=>c.toBlob(r,"image/png",0.95)); if(!blob) return;
+  const file=new File([blob],"heartland-weather.png",{type:"image/png"});
+  const s=_snap||{}, text=(s.place?s.place+": ":"")+(s.tempR!=null?s.tempR+"° "+(s.cond||""):"")+(s.alert?" — ⚠ "+s.alert.event:(s.verdict?" — "+s.verdict:""));
+  const url="https://teskemj.github.io/ai/";
+  const C=window.Capacitor;
+  if(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.Share && C.Plugins.Filesystem){
+    try{ const b64=c.toDataURL("image/png").split(",")[1], fn="hwd-"+Date.now()+".png";
+      const w=await C.Plugins.Filesystem.writeFile({path:fn,data:b64,directory:"CACHE"});
+      await C.Plugins.Share.share({title:"Heartland Weather Desk",text,url:w.uri}); return;
+    }catch(e){}
+  }
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:"Heartland Weather Desk",text}); return; }
+    catch(e){ if(e&&e.name==="AbortError") return; }
+  }
+  try{ const u=URL.createObjectURL(blob),a=document.createElement("a"); a.href=u; a.download="heartland-weather.png";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); }catch(e){}
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text+" — "+url).catch(()=>{}); }catch(e){}
+}
+document.addEventListener("click",e=>{ if(e.target.closest("[data-share]")) shareCard(); });
 
 /* ================= severe-weather push (native app only) =================
    On web this is inert. In the Capacitor app it registers for push and tells

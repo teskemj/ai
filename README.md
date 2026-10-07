@@ -19,6 +19,8 @@ no build, no dependencies, no API keys — plus a Capacitor wrapper for iOS/Andr
 - **Field & Stream** — hunting & fishing ratings, solunar feeding windows, moon phase,
   barometric pressure trend
 - **BBQ forecast** — grill verdict + best grilling window today
+- **Share cards** — one-tap branded, team-colored image of the conditions or the active
+  NWS alert (native share / Web Share API / download)
 
 ## Sources
 - Official hazard alerts: [National Weather Service](https://www.weather.gov) (`api.weather.gov`)
