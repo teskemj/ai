@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Native platform folders are generated locally by `npx cap add ios/android`.
+# Remove these two lines if you'd rather commit the native projects.
+/ios/
+/android/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log

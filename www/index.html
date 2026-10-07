@@ -1,0 +1,1282 @@
+<title>Heartland Weather Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+<style>
+  /* LAYOUT: a live scenic sky fills the screen; the current-conditions hero floats over it as glass, with solid panels below for the verdicts, an hour-by-hour strip, and the 10-day almanac. */
+  :root{
+    --bg:#cfe0f0; --panel:#ffffff; --panel-2:#f6f8fa; --ink:#18212e; --ink-soft:#50606f;
+    --line:#d7dee5; --accent:#1f6f8b; --accent-ink:#0f4a5e; --amber:#c47a1a; --amber-bg:#fbf0dc;
+    --good:#2e7d4f; --warn:#c27c16; --bad:#c23b2e; --crit:#9a2b8f; --haz:#7a1d1d;
+    --glass:rgba(255,255,255,.82); --glass-brd:rgba(255,255,255,.65);
+    --shadow:0 1px 2px rgba(20,30,45,.08),0 10px 30px rgba(20,30,45,.14);
+    --disp:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
+    --line:#2a3744; --accent:#56b6cf; --accent-ink:#8fd4e6; --amber:#e6a94a; --amber-bg:#2a2214;
+    --good:#5fcf8e; --warn:#e6b14a; --bad:#ef6a5c; --crit:#d97fce; --haz:#e05a5a;
+    --glass:rgba(16,22,30,.72); --glass-brd:rgba(255,255,255,.10);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4); color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
+    --line:#2a3744; --accent:#56b6cf; --accent-ink:#8fd4e6; --amber:#e6a94a; --amber-bg:#2a2214;
+    --glass:rgba(16,22,30,.72); --glass-brd:rgba(255,255,255,.10);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4); color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{background:transparent;color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
+  #sky{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
+  .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+
+  /* Masthead */
+  header.mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--glass);
+    -webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);
+    border-bottom:1px solid var(--glass-brd);padding-block:12px;margin-bottom:18px}
+  .mast-row{max-width:1040px;margin:0 auto;padding-inline:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column;line-height:1.05;margin-right:auto}
+  .brand b{font-family:var(--disp);font-weight:700;font-size:1.35rem;letter-spacing:-.01em}
+  .brand small{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+  form.search{display:flex;gap:6px;align-items:center;flex:1 1 240px;min-width:0}
+  .search input{flex:1 1 auto;min-width:0;font:inherit;font-size:.95rem;padding:9px 12px;border:1px solid var(--line);
+    border-radius:9px;background:var(--panel);color:var(--ink)}
+  .search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:9px;padding:9px 12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.icon{padding:9px 11px}
+  button.icon.off{opacity:.4}
+  .suggest{position:relative;flex:1 1 240px;min-width:0}
+  .suggest .list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;box-shadow:var(--shadow);overflow:hidden;z-index:50}
+  .suggest .list button{display:block;width:100%;text-align:left;border:0;border-radius:0;border-bottom:1px solid var(--line);background:none}
+  .suggest .list button:last-child{border-bottom:0}
+  .suggest .list button:hover{background:var(--panel-2)}
+  .suggest .list small{color:var(--ink-soft);font-family:var(--mono);font-size:.7rem}
+
+  /* Holiday banner */
+  .holiday{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:12px 16px;border-radius:14px;
+    background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    border:1px solid var(--glass-brd);box-shadow:var(--shadow)}
+  .holiday .emo{font-size:1.9rem;line-height:1}
+  .holiday .txt b{font-family:var(--disp);font-weight:700;font-size:1.05rem;display:block}
+  .holiday .txt span{font-size:.86rem;color:var(--ink-soft)}
+  .holiday .cd{margin-left:auto;text-align:right;font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+  .holiday .cd b{display:block;font-size:1.3rem;color:var(--accent);font-family:var(--disp);letter-spacing:0}
+  .holiday.today{border-color:var(--amber);background:color-mix(in srgb,var(--amber-bg) 70%,var(--glass))}
+
+  /* Alert strip */
+  .alerts{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .alert{border:1px solid;border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .alert .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .alert h3{margin:0;font-family:var(--disp);font-weight:700;font-size:1.05rem}
+  .alert .sev{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 8px;border-radius:999px;color:#fff;margin-left:auto}
+  .alert p{margin:8px 0 0;font-size:.9rem;color:var(--ink-soft)}
+  .alert.c-extreme,.alert.c-severe{background:color-mix(in srgb,var(--bad) 14%,var(--panel));border-color:var(--bad)}
+  .alert.c-extreme .sev,.alert.c-severe .sev{background:var(--bad)}
+  .alert.c-moderate{background:var(--amber-bg);border-color:var(--amber)}
+  .alert.c-moderate .sev{background:var(--amber)}
+  .alert.c-minor{background:var(--panel);border-color:var(--line)}
+  .alert.c-minor .sev{background:var(--ink-soft)}
+  details.alert summary{list-style:none;cursor:pointer}
+  details.alert summary::-webkit-details-marker{display:none}
+
+  /* Hero (glass over the sky) */
+  .hero{background:var(--glass);-webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
+    border:1px solid var(--glass-brd);border-radius:20px;box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
+  .hero-grid{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+  .place{font-family:var(--disp);font-weight:600;font-size:1.25rem;letter-spacing:-.01em}
+  .place span{color:var(--ink-soft);font-weight:500}
+  .asof{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
+  .nowtemp{display:flex;align-items:flex-start;gap:4px;margin-top:6px}
+  .nowtemp b{font-family:var(--disp);font-weight:700;font-size:4.6rem;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .nowtemp .deg{font-family:var(--disp);font-weight:600;font-size:1.6rem;margin-top:4px}
+  .cond{font-size:1.05rem;font-weight:600;margin-top:2px}
+  .feels{color:var(--ink-soft);font-size:.92rem;margin-top:2px}
+  .glyph{font-size:4.6rem;line-height:1;text-align:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+  .nowstats{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{display:flex;flex-direction:column;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    padding:8px 12px;min-width:92px}
+  .chip .k{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .chip .v{font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums;margin-top:2px}
+  .quip{margin-top:16px;padding:14px 16px;border-left:3px solid var(--accent);background:var(--panel-2);
+    border-radius:0 10px 10px 0;font-size:.98rem}
+  .quip b{font-family:var(--disp)}
+
+  /* Verdict grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+  .card h2{margin:0 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  .verdict{font-family:var(--disp);font-weight:700;font-size:1.5rem;letter-spacing:-.01em;line-height:1.05;margin:6px 0 6px}
+  .verdict.go{color:var(--good)} .verdict.maybe{color:var(--warn)} .verdict.no{color:var(--bad)}
+  .card p{margin:6px 0 0;font-size:.92rem;color:var(--ink-soft)}
+  .wear-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:7px}
+  .wear-list li{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.84rem;font-weight:500}
+
+  /* Ballpark lines */
+  .lines{display:flex;flex-direction:column;gap:11px;margin-top:6px}
+  .line{display:flex;gap:10px;align-items:flex-start}
+  .line .lg{font-size:1.4rem;line-height:1.25;flex:0 0 auto}
+  .line .lx{flex:1;min-width:0;font-size:.9rem}
+  .line .lx b{font-family:var(--disp)}
+  .lean{align-self:center;flex:0 0 auto;font-family:var(--mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;
+    padding:3px 8px;border-radius:999px;white-space:nowrap;color:#fff}
+  .lean.over{background:var(--good)} .lean.under{background:var(--amber)}
+  .lean.no{background:var(--bad)} .lean.push{background:var(--ink-soft)}
+  .disclaim{font-size:.74rem;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink-soft)}
+
+  /* Game watch */
+  .games{display:flex;flex-direction:column;gap:13px;margin-top:6px}
+  .game{display:flex;align-items:center;gap:10px}
+  .game .gteam{font-weight:600;font-size:.9rem;flex:0 0 auto}
+  .game .gmeta{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+  .game .gmeta b{font-size:.95rem;font-variant-numeric:tabular-nums}
+  .game .gmeta span{font-family:var(--mono);font-size:.64rem;color:var(--ink-soft);letter-spacing:.04em}
+  .game .gbadge{margin-left:auto;flex:0 0 auto;background:var(--accent);color:#fff;font-family:var(--mono);
+    font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+  .game.today .gteam{color:var(--accent)}
+  .game .lgtag{font-family:var(--mono);font-size:.5rem;letter-spacing:.06em;color:var(--ink-soft);
+    border:1px solid var(--line);border-radius:4px;padding:1px 4px;vertical-align:middle}
+  .season-tag{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 8px;margin-left:auto}
+
+  /* Field & Stream */
+  .factors{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px}
+  .factor{display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:5px 9px;font-size:.8rem}
+  .periods{display:flex;flex-direction:column;gap:0;margin-top:6px}
+  .period{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:.86rem;
+    padding:7px 0;border-bottom:1px solid var(--line)}
+  .period:last-child{border-bottom:0}
+  .period .pk{font-family:var(--mono);font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  .period b{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .period.major b{color:var(--accent)}
+  .moonbig{display:flex;align-items:center;gap:13px;margin-top:2px}
+  .moonbig .mp{font-size:2.8rem;line-height:1}
+  .moonbig .mi b{font-family:var(--disp);font-weight:700;font-size:1.1rem;display:block}
+  .moonbig .mi span{font-size:.82rem;color:var(--ink-soft)}
+
+  /* AQI gauge */
+  .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  .aqi-num b{font-family:var(--disp);font-weight:700;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
+  .aqi-cat{font-weight:700;font-size:.95rem}
+  .gauge{height:10px;border-radius:999px;margin-top:12px;position:relative;
+    background:linear-gradient(90deg,#2e9c5a 0%,#2e9c5a 16.6%,#d8c42e 16.6%,#d8c42e 33.3%,#e08a2e 33.3%,#e08a2e 50%,#d8463a 50%,#d8463a 66.6%,#9a44c9 66.6%,#9a44c9 83.3%,#7a1d1d 83.3%,#7a1d1d 100%)}
+  .gauge .pin{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink);
+    box-shadow:0 0 0 2px var(--panel);transform:translateX(-50%)}
+
+  /* Section strips */
+  .section-head{display:flex;align-items:baseline;gap:10px;margin:4px 2px 12px}
+  .section-head h2{font-family:var(--disp);font-weight:700;font-size:1.4rem;letter-spacing:-.01em;margin:0;
+    text-shadow:0 1px 10px rgba(0,0,0,.18)}
+  .section-head small{font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+
+  .hours{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(64px,1fr);gap:8px;overflow-x:auto;
+    padding-bottom:8px;scroll-snap-type:x proximity;margin-bottom:22px}
+  .hour{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;
+    scroll-snap-align:start;box-shadow:var(--shadow)}
+  .hour .hr{font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;color:var(--ink-soft);font-weight:700}
+  .hour .hic{font-size:1.5rem;margin:5px 0 3px}
+  .hour .ht{font-weight:700;font-variant-numeric:tabular-nums}
+  .hour .hp{font-family:var(--mono);font-size:.6rem;color:var(--ink-soft);margin-top:3px}
+  .hour .hp.wet{color:var(--accent);font-weight:700}
+
+  .strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(118px,1fr);gap:10px;overflow-x:auto;
+    padding-bottom:8px;scroll-snap-type:x proximity}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 12px;text-align:center;
+    scroll-snap-align:start;box-shadow:var(--shadow)}
+  .day .dow{font-weight:700;font-size:.9rem}
+  .day .date{font-family:var(--mono);font-size:.6rem;color:var(--ink-soft);letter-spacing:.06em}
+  .day .ic{font-size:2rem;margin:7px 0 4px}
+  .day .hl{font-variant-numeric:tabular-nums;font-size:.98rem}
+  .day .hl .hi{font-weight:700} .day .hl .lo{color:var(--ink-soft)}
+  .day .mini{display:flex;flex-direction:column;gap:3px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:.72rem;color:var(--ink-soft);font-family:var(--mono)}
+  .day .mini span{display:flex;justify-content:space-between;gap:6px}
+  .day .mini b{color:var(--ink);font-weight:700}
+
+  footer{margin-top:26px;padding:16px;border-radius:14px;background:var(--glass);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--glass-brd);
+    font-size:.8rem;color:var(--ink-soft)}
+  footer a{color:var(--accent)}
+  footer .src{font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;margin-top:6px}
+
+  .skeleton,.msg{background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    border:1px solid var(--glass-brd);border-radius:16px;box-shadow:var(--shadow);padding:28px;text-align:center;color:var(--ink-soft)}
+  .msg b{color:var(--ink);font-family:var(--disp);display:block;font-size:1.15rem;margin-bottom:4px}
+  .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+  @media (max-width:560px){
+    .hero-grid{grid-template-columns:1fr}
+    .glyph{text-align:left;font-size:3.6rem}
+    .nowtemp b{font-size:3.8rem}
+  }
+</style>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<header class="mast">
+  <div class="mast-row">
+    <div class="brand"><b>Heartland Weather Desk</b><small>NWS&nbsp;·&nbsp;NOAA models&nbsp;·&nbsp;no sugarcoating</small></div>
+    <div class="suggest">
+      <form class="search" id="searchForm" autocomplete="off">
+        <input id="q" type="text" placeholder="City or 5-digit ZIP" aria-label="Search location">
+        <button type="submit" class="primary">Search</button>
+      </form>
+      <div id="sugg" hidden></div>
+    </div>
+    <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
+    <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
+    <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="holiday" hidden></div>
+  <div id="alerts" class="alerts" hidden></div>
+  <div id="content">
+    <div class="skeleton"><span class="spin"></span>&nbsp;&nbsp;Consulting the sky…</div>
+  </div>
+  <footer>
+    Official hazard alerts from the <a href="https://www.weather.gov" target="_blank" rel="noopener">U.S. National Weather Service</a>.
+    Forecast, humidity &amp; air quality via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (NOAA's GFS/HRRR guidance). ZIP lookup via Zippopotam.us. Holidays are U.S.
+    <div class="src" id="srcLine">Not a substitute for official warnings. If a siren goes off, don't finish reading this app.</div>
+  </footer>
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const content = $("#content"), alertsEl = $("#alerts"), holidayEl = $("#holiday");
+const REDUCED = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+/* ================= persistence ================= */
+function savePlace(p){ try{ localStorage.setItem("hwd.place", JSON.stringify(p)); }catch(e){} }
+function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||"null"); }catch(e){ return null; } }
+
+/* ================= theme ================= */
+(function(){
+  let t=null; try{ t=localStorage.getItem("hwd.theme"); }catch(e){}
+  if(t) document.documentElement.setAttribute("data-theme",t);
+  $("#themeBtn").addEventListener("click",()=>{
+    const cur=document.documentElement.getAttribute("data-theme");
+    const sysDark=window.matchMedia("(prefers-color-scheme:dark)").matches;
+    const next=(cur? cur : (sysDark?"dark":"light"))==="dark" ? "light":"dark";
+    document.documentElement.setAttribute("data-theme",next);
+    try{ localStorage.setItem("hwd.theme",next); }catch(e){}
+  });
+})();
+
+/* ================= sports on/off toggle ================= */
+(function(){
+  const btn=$("#sportsBtn");
+  function sync(){ btn.classList.toggle("off", !sportsEnabled()); btn.title=(sportsEnabled()?"Hide":"Show")+" sports"; }
+  sync();
+  btn.addEventListener("click",()=>{
+    const on=!sportsEnabled();
+    try{ localStorage.setItem("hwd.sports", on?"on":"off"); }catch(e){}
+    sync();
+    if(_lastPlace) go(_lastPlace);
+  });
+})();
+
+/* ================= weather codes ================= */
+const WMO={
+  0:["Clear","☀️"],1:["Mostly clear","🌤️"],2:["Partly cloudy","⛅"],3:["Overcast","☁️"],
+  45:["Fog","🌫️"],48:["Rime fog","🌫️"],
+  51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],
+  56:["Freezing drizzle","🌨️"],57:["Freezing drizzle","🌨️"],
+  61:["Light rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],
+  66:["Freezing rain","🌨️"],67:["Freezing rain","🌨️"],
+  71:["Light snow","🌨️"],73:["Snow","❄️"],75:["Heavy snow","❄️"],77:["Snow grains","🌨️"],
+  80:["Rain showers","🌦️"],81:["Rain showers","🌧️"],82:["Violent showers","⛈️"],
+  85:["Snow showers","🌨️"],86:["Heavy snow showers","❄️"],
+  95:["Thunderstorm","⛈️"],96:["Storm w/ hail","⛈️"],99:["Severe storm w/ hail","⛈️"]
+};
+const wmo = c => WMO[c] || ["Unknown","🌡️"];
+
+/* ================= AQI ================= */
+function aqiCat(a){
+  if(a==null) return {label:"—",color:"var(--ink-soft)",note:"No reading."};
+  if(a<=50) return {label:"Good",color:"var(--good)",note:"Air's clean. Breathe like you mean it."};
+  if(a<=100) return {label:"Moderate",color:"var(--warn)",note:"Fine for most. The dramatically sensitive may sniffle."};
+  if(a<=150) return {label:"Unhealthy for sensitive groups",color:"#e08a2e",note:"Asthma, kids, and the elderly: take it easy out there."};
+  if(a<=200) return {label:"Unhealthy",color:"var(--bad)",note:"Everyone feels this one. Cut the outdoor cardio."};
+  if(a<=300) return {label:"Very unhealthy",color:"var(--crit)",note:"Stay inside. This is not the air you want in your lungs."};
+  return {label:"Hazardous",color:"var(--haz)",note:"Genuinely dangerous. Doors shut, mask on if you must go out."};
+}
+
+/* ================= fetch ================= */
+async function getJSON(url){
+  const r = await fetch(url, {headers:{Accept:"application/json"}});
+  if(!r.ok) throw new Error(url.split("?")[0]+" → "+r.status);
+  return r.json();
+}
+async function geocode(q){
+  const d=await getJSON("https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name="+encodeURIComponent(q));
+  return (d.results||[]).map(r=>({
+    name:r.name, admin1:r.admin1, country:r.country_code, lat:r.latitude, lon:r.longitude,
+    label:[r.name, r.admin1, r.country_code].filter(Boolean).join(", ")
+  }));
+}
+async function geocodeZip(zip){
+  const d=await getJSON("https://api.zippopotam.us/us/"+zip);
+  const p=(d.places||[])[0]; if(!p) return null;
+  return {name:p["place name"], admin1:p.state, country:"US",
+    lat:parseFloat(p.latitude), lon:parseFloat(p.longitude),
+    label:p["place name"]+", "+p["state abbreviation"]+" "+zip};
+}
+const isZip = s => /^\d{5}$/.test(s.trim());
+
+/* ================= search suggestions ================= */
+let suggTimer=null;
+$("#q").addEventListener("input",e=>{
+  const v=e.target.value.trim();
+  clearTimeout(suggTimer);
+  if(v.length<2 || isZip(v)){ $("#sugg").hidden=true; return; }
+  suggTimer=setTimeout(async()=>{
+    try{
+      const res=await geocode(v);
+      if(!res.length){ $("#sugg").hidden=true; return; }
+      const box=$("#sugg"); box.className="list"; box.innerHTML=""; box.hidden=false;
+      res.forEach(r=>{
+        const b=document.createElement("button"); b.type="button";
+        b.innerHTML=`${esc(r.name)} <small>${esc([r.admin1,r.country].filter(Boolean).join(" · "))}</small>`;
+        b.onclick=()=>{ $("#sugg").hidden=true; $("#q").value=r.label; go(r); };
+        box.appendChild(b);
+      });
+    }catch(err){ $("#sugg").hidden=true; }
+  },280);
+});
+document.addEventListener("click",e=>{ if(!e.target.closest(".suggest")) $("#sugg").hidden=true; });
+
+$("#searchForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const v=$("#q").value.trim(); if(!v) return;
+  $("#sugg").hidden=true;
+  showMsg("Finding “"+esc(v)+"”…",true);
+  try{
+    if(isZip(v)){
+      const z=await geocodeZip(v);
+      if(!z){ showMsg("That ZIP didn't resolve. Try the city name instead.",false); return; }
+      go(z); return;
+    }
+    const res=await geocode(v);
+    if(!res.length){ showMsg("Never heard of “"+esc(v)+".” Check the spelling, or it's too small to make the map.",false); return; }
+    go(res[0]);
+  }catch(err){ showMsg("Search hit a wall. Try again in a sec.",false); }
+});
+
+/* ================= geolocation ================= */
+$("#locBtn").addEventListener("click",()=>{
+  if(!navigator.geolocation){ showMsg("Your browser won't share its location. Type a city instead.",false); return; }
+  showMsg("Triangulating your exact couch…",true);
+  navigator.geolocation.getCurrentPosition(
+    pos=>go({name:"Your location",admin1:"",country:"",lat:pos.coords.latitude,lon:pos.coords.longitude,label:"Your location"}),
+    ()=>showMsg("Location denied. Respect. Type a city or ZIP instead.",false),
+    {timeout:9000}
+  );
+});
+
+function showMsg(text,spin){ content.innerHTML=`<div class="msg"><b>${spin?'<span class="spin"></span>&nbsp;&nbsp;':''}${text}</b></div>`; }
+
+/* ================= what to wear ================= */
+function dressFor(feels,pop,wind,uv,code){
+  const items=[]; let lead="";
+  if(feels<0){ lead="Dress like the Arctic owes you money."; items.push("🧥 Heaviest coat","🧣 Scarf over your face","🧤 Insulated gloves","🥾 Real boots","🔥 Base layers"); }
+  else if(feels<20){ lead="Full winter kit. No heroics."; items.push("🧥 Winter coat","🧣 Scarf","🧤 Gloves","🎧 Hat","🥾 Boots"); }
+  else if(feels<35){ lead="Coat weather, and you know it."; items.push("🧥 Warm coat","🧤 Gloves","👖 Long pants","👟 Closed shoes"); }
+  else if(feels<50){ lead="The classic Midwest layer trap."; items.push("🧥 Jacket","👕 Long sleeves","👖 Pants","🧦 Socks you'll regret by noon"); }
+  else if(feels<65){ lead="Light-jacket limbo. Bring it, blame the forecast."; items.push("🧥 Light jacket","👕 Long or short sleeves","👖 Pants"); }
+  else if(feels<78){ lead="Genuinely pleasant. Dress like a functional adult."; items.push("👕 T-shirt","👖 Pants or shorts","😎 Optional smugness"); }
+  else if(feels<88){ lead="Warm. Keep it breathable."; items.push("👕 Light shirt","🩳 Shorts","🧢 Hat","💧 Water bottle"); }
+  else { lead="Dangerously hot. Dress like you're avoiding the oven you live in."; items.push("🩳 Least clothing legally advisable","🧢 Hat","🕶️ Sunglasses","💧 Water, lots","🧊 A plan to stay indoors"); }
+  if(pop>=50) items.push("☔ Umbrella (it'll invert, it always does)");
+  else if(pop>=30) items.push("🧥 Something water-resistant, just in case");
+  if(wind>=25) items.push("💨 Nothing you mind chasing down the block");
+  if(uv>=7) items.push("🧴 Sunscreen");
+  if([71,73,75,77,85,86,66,67,56,57].includes(code)) items.push("🥾 Traction — it's slick out there");
+  return {lead,items};
+}
+
+/* ================= ballpark: wind direction, evening drop, wear, sports lines ================= */
+function compass(d){ if(d==null) return ""; return ["N","NE","E","SE","S","SW","W","NW"][Math.round(d/45)%8]; }
+
+function eveningFeels(fc){
+  const h=fc.hourly, off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off;
+  let start=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000); if(start<0) start=0;
+  const end=Math.min(start+18,h.time.length), vals=[];
+  for(let i=start;i<end;i++){ const hr=new Date(Date.parse(h.time[i]+"Z")).getUTCHours();
+    if(hr>=18&&hr<=22){ vals.push(h.apparent_temperature?h.apparent_temperature[i]:h.temperature_2m[i]); } }
+  return vals.length? Math.round(Math.min(...vals)) : null;
+}
+
+function bleacherWear(feels,pop,wind,uv,code,evn){
+  const items=[]; let lead;
+  const wet=pop>=50||[51,53,55,61,63,65,80,81,82,95,96,99].includes(code);
+  const snow=[71,73,75,77,85,86].includes(code);
+  if(feels<=20){ lead="You'll be sitting still in the cold for three hours. Dress like it's a survival exercise, because it is.";
+    items.push("🧥 Parka, not a jacket","🧣 Scarf + hat","🧤 Gloves","🔥 Hand & foot warmers","🪑 Seat cushion (metal bleachers are merciless)","🧦 Wool socks","☕ Thermos of something warm"); }
+  else if(feels<40){ lead="Cold-game kit. The sun leaves, the metal stays freezing.";
+    items.push("🧥 Heavy coat","🎧 Beanie","🧤 Gloves","🪑 Something to sit on","🧣 Blanket for the late innings"); }
+  else if(feels<55){ lead="Deceptively chilly once you stop moving. Bring the layer you'll pretend you didn't need.";
+    items.push("🧥 Hoodie + an extra layer","👖 Long pants","🪑 Seat cushion","🧦 Real socks"); }
+  else if(feels<72){ lead="Pleasant now, cooler by the 7th. Pack for the version of today that happens at night.";
+    items.push("👕 Long-sleeve or tee","🧥 Light layer for the evening drop","🧢 Hat","🕶️ Sunglasses"); }
+  else if(feels<86){ lead="Good game weather. Mind the sun, mind the beer line.";
+    items.push("👕 T-shirt","🧢 Cap","🕶️ Sunglasses","🧴 Sunscreen","💧 Water"); }
+  else { lead="Hot-seat special. Shade and water are the whole strategy.";
+    items.push("👕 Lightest shirt you own","🧢 Hat","🕶️ Sunglasses","🧴 Sunscreen, reapplied","💧 Water, then more","🧊 A frozen towel if you're fancy"); }
+  if(wet) items.push("🧥 Poncho (umbrellas start fights in the stands)");
+  if(snow) items.push("❄️ Waterproof boots");
+  if(wind>=18) items.push("💨 Secure the hat or kiss it goodbye");
+  if(uv>=7 && feels<72) items.push("🧴 Sunscreen (yes, even now)");
+  let note=null;
+  if(evn!=null && (feels-evn)>=8) note="First pitch feels like ~"+Math.round(feels)+"°, but by the late innings it's ~"+evn+"°. That layer is not optional.";
+  return {lead,items,note};
+}
+
+/* ================= BBQ / grill forecast ================= */
+function bbqReport(fc,cur){
+  const feels=cur.apparent_temperature, wind=cur.wind_speed_10m, code=cur.weather_code;
+  const storm=[95,96,99,82,65,75,86].includes(code);
+  const wet=[51,53,55,61,63,80,81,67,57].includes(code);
+  let label,vc,why;
+  if(storm){ label="Hard pass"; vc="no"; why="Storms or heavy stuff coming down. Even stubborn grillers respect lightning — order in tonight."; }
+  else if(wet){ label="Garage grilling"; vc="maybe"; why="On-and-off precip. Crack the garage door, keep the lid down, and commit to the bit."; }
+  else if(wind>=25){ label="Fight the wind"; vc="maybe"; why="Gusty out there — flare-ups and runaway temps. Shield the grill or wait for a lull."; }
+  else if(feels<=25){ label="Hardcore only"; vc="maybe"; why="Brutally cold. Propane sulks and the grates fight back. Bundle up, legend."; }
+  else if(feels<=45){ label="Doable, dress warm"; vc="maybe"; why="Chilly but dry. Preheat longer, keep that lid closed, and don't dawdle with the tongs."; }
+  else if(feels>=95){ label="Dawn or dusk"; vc="maybe"; why="Too hot to stand over coals midday. Grill early or late, cold drink mandatory."; }
+  else { label="Fire it up"; vc="go"; why="Prime grilling weather — dry, comfortable, and begging for something over the flames."; }
+  // best grilling window left today
+  const h=fc.hourly, off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off, todayStr=new Date(nowU).toISOString().slice(0,10);
+  let i=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000); if(i<0) i=0;
+  const sc=k=>{ let s=2;
+    const pp=h.precipitation_probability?h.precipitation_probability[k]:0, c=h.weather_code[k],
+      w=h.wind_speed_10m?h.wind_speed_10m[k]:wind, f=h.apparent_temperature?h.apparent_temperature[k]:feels, day=h.is_day?h.is_day[k]:1;
+    if([95,96,99,82,65,75,86].includes(c)) s-=4; if(pp>=50) s-=3; else if(pp>=30) s-=1;
+    if(w>25) s-=2; else if(w>=15) s-=1;
+    if(f<25) s-=2; else if(f<45) s-=1; else if(f>=50&&f<=88) s+=1; else if(f>95) s-=1;
+    if(day) s+=1; return s; };
+  let bestA=-1,bestB=-1,curA=-1;
+  for(let k=i;k<h.time.length && h.time[k].slice(0,10)===todayStr;k++){
+    if(sc(k)>=3){ if(curA<0) curA=k; if(bestA<0 || (k-curA)>(bestB-bestA)){ bestA=curA; bestB=k; } }
+    else curA=-1;
+  }
+  let window=null;
+  if(bestA>=0){ const fl=ms=>new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',timeZone:'UTC'});
+    window=fl(Date.parse(h.time[bestA]+"Z"))+"–"+fl(Date.parse(h.time[bestB]+"Z")+3600000); }
+  let smoker;
+  if(wind>=18) smoker="Low-and-slow today? "+Math.round(wind)+" mph wind will swing your temps and eat fuel — ride the vents.";
+  else if(feels<=32) smoker="Cold-smoke day — budget extra fuel and time; insulate the cook chamber if you can.";
+  else smoker="Great day for low-and-slow — steady air, steady smoke.";
+  return {label,vc,why,window,smoker};
+}
+
+function sportsLines(feels,temp,wind,gust,pop,code){
+  const storm=[95,96,99].includes(code), heavy=[65,82,86,75].includes(code);
+  const wet=pop>=50||[51,53,55,61,63,65,80,81,82].includes(code)||storm;
+  const snow=[71,73,75,77,85,86].includes(code);
+  const windy=wind>=18||gust>=28, calm=wind<8, frigid=feels<=20, cold=feels<40, hot=feels>=88;
+  const L=[];
+  // Baseball
+  if(storm||heavy||snow) L.push({icon:"⚾",sport:"Baseball",text:"The tarp's coming out. First pitch is a maybe; your $14 nachos are not.",lean:"Rain delay",cls:"no"});
+  else if(hot&&calm) L.push({icon:"⚾",sport:"Baseball",text:"Hot and dead-still — thin, warm air and the ball flies. So do the beer prices.",lean:"Over",cls:"over"});
+  else if(windy&&feels>=58) L.push({icon:"⚾",sport:"Baseball",text:"Wind's whipping through — fly balls become a group project for the outfield.",lean:"Chaos / over",cls:"over"});
+  else if(feels<50) L.push({icon:"⚾",sport:"Baseball",text:"Chilly for baseball — the ball doesn't carry, and neither does your enthusiasm.",lean:"Under",cls:"under"});
+  else L.push({icon:"⚾",sport:"Baseball",text:"Honest baseball weather. The ball behaves. So, suspiciously, does everyone else.",lean:"Pick 'em",cls:"push"});
+  // Football
+  if(frigid) L.push({icon:"🏈",sport:"Football",text:"Lambeau-core. "+Math.round(feels)+"° feels-like — frozen-tundra ball. Run game, shanked kicks, frostbitten fingers.",lean:"Under, hard",cls:"under"});
+  else if(cold&&windy) L.push({icon:"🏈",sport:"Football",text:"Cold and windy — the passing game shrinks and the punter quietly updates his résumé.",lean:"Under",cls:"under"});
+  else if(wet) L.push({icon:"🏈",sport:"Football",text:"Sloppy track. Fumbles, short fields, and a kicker living a nightmare.",lean:"Under / run",cls:"under"});
+  else if(hot) L.push({icon:"🏈",sport:"Football",text:"Warm for football — early-season sweat bowl. Cramp city by the fourth quarter.",lean:"Slight over",cls:"over"});
+  else L.push({icon:"🏈",sport:"Football",text:"Fair football weather. No excuses — which is its own special kind of pressure.",lean:"Pick 'em",cls:"push"});
+  // Golf
+  if(storm) L.push({icon:"⛳",sport:"Golf",text:"Lightning plus a bag of irons is a cautionary tale. The clubhouse is undefeated.",lean:"Clubhouse",cls:"no"});
+  else if(windy) L.push({icon:"⛳",sport:"Golf",text:"Gusts to "+Math.round(gust)+" — par just became aspirational and your slice is now a felony.",lean:"Blame the wind",cls:"under"});
+  else if(wet) L.push({icon:"⛳",sport:"Golf",text:"Wet and soft — no roll, plugged lies, soggy socks. Lift, clean, and complain.",lean:"Soft",cls:"under"});
+  else if(hot) L.push({icon:"⛳",sport:"Golf",text:"Hot one — ride the cart, hydrate, reapply. The back nine is where scorecards go to die.",lean:"Fade late",cls:"under"});
+  else L.push({icon:"⛳",sport:"Golf",text:"Genuinely nice golf weather. Deeply suspicious. Tee off before the sky reconsiders.",lean:"Send it",cls:"over"});
+  // Tailgate
+  if(frigid) L.push({icon:"🍺",sport:"Tailgate",text:"Survival tailgate. Propane, chili, and decisions you'll defend forever. We'll be there.",lean:"4/10",cls:"under"});
+  else if(storm||heavy) L.push({icon:"🍺",sport:"Tailgate",text:"Soggy lot. The grill is fighting for its life and losing with dignity.",lean:"3/10",cls:"no"});
+  else if(cold) L.push({icon:"🍺",sport:"Tailgate",text:"Crisp lot, cold hands, hot brats. This is the good stuff, actually.",lean:"7/10",cls:"over"});
+  else if(hot) L.push({icon:"🍺",sport:"Tailgate",text:"Parking-lot sauna. Keep the cooler full and the cornhole in the shade.",lean:"6/10",cls:"push"});
+  else L.push({icon:"🍺",sport:"Tailgate",text:"Chef's-kiss tailgate weather. Clear skies, cold cans. Call in sick tomorrow.",lean:"10/10",cls:"over"});
+  return L.map(l=>({...l, key:l.sport.toLowerCase()}));
+}
+
+/* ================= seasonal smarts ================= */
+function seasonInfo(){
+  const m=new Date().getMonth(); // 0=Jan
+  const football=(m>=8||m<=1), baseball=(m>=2&&m<=9), golf=(m>=3&&m<=9);
+  const primary= football ? "football" : (baseball ? "baseball" : "football");
+  return {football,baseball,golf,primary,label:primary==="football"?"football season":"baseball season"};
+}
+
+/* ================= team schedules (location-aware, live from ESPN) ================= */
+const LG={
+  nfl:{emoji:"🏈",tag:"NFL"}, mlb:{emoji:"⚾",tag:"MLB"},
+  nba:{emoji:"🏀",tag:"NBA"}, ncaaf:{emoji:"🎓",tag:"CFB"}
+};
+const TEAM_DB={
+  packers:{label:"Packers",lg:"nfl",path:"football/nfl/teams/gb"},
+  vikings:{label:"Vikings",lg:"nfl",path:"football/nfl/teams/min"},
+  bears:{label:"Bears",lg:"nfl",path:"football/nfl/teams/chi"},
+  lions:{label:"Lions",lg:"nfl",path:"football/nfl/teams/det"},
+  browns:{label:"Browns",lg:"nfl",path:"football/nfl/teams/cle"},
+  bengals:{label:"Bengals",lg:"nfl",path:"football/nfl/teams/cin"},
+  colts:{label:"Colts",lg:"nfl",path:"football/nfl/teams/ind"},
+  chiefs:{label:"Chiefs",lg:"nfl",path:"football/nfl/teams/kc"},
+  brewers:{label:"Brewers",lg:"mlb",path:"baseball/mlb/teams/mil"},
+  cubs:{label:"Cubs",lg:"mlb",path:"baseball/mlb/teams/chc"},
+  whitesox:{label:"White Sox",lg:"mlb",path:"baseball/mlb/teams/chw"},
+  twins:{label:"Twins",lg:"mlb",path:"baseball/mlb/teams/min"},
+  tigers:{label:"Tigers",lg:"mlb",path:"baseball/mlb/teams/det"},
+  guardians:{label:"Guardians",lg:"mlb",path:"baseball/mlb/teams/cle"},
+  reds:{label:"Reds",lg:"mlb",path:"baseball/mlb/teams/cin"},
+  cardinals:{label:"Cardinals",lg:"mlb",path:"baseball/mlb/teams/stl"},
+  royals:{label:"Royals",lg:"mlb",path:"baseball/mlb/teams/kc"},
+  bucks:{label:"Bucks",lg:"nba",path:"basketball/nba/teams/mil"},
+  bulls:{label:"Bulls",lg:"nba",path:"basketball/nba/teams/chi"},
+  wolves:{label:"Timberwolves",lg:"nba",path:"basketball/nba/teams/min"},
+  pistons:{label:"Pistons",lg:"nba",path:"basketball/nba/teams/det"},
+  cavaliers:{label:"Cavaliers",lg:"nba",path:"basketball/nba/teams/cle"},
+  pacers:{label:"Pacers",lg:"nba",path:"basketball/nba/teams/ind"},
+  badgers:{label:"Badgers",lg:"ncaaf",path:"football/college-football/teams/275"},
+  gophers:{label:"Gophers",lg:"ncaaf",path:"football/college-football/teams/135"},
+  illini:{label:"Illini",lg:"ncaaf",path:"football/college-football/teams/356"},
+  buckeyes:{label:"Buckeyes",lg:"ncaaf",path:"football/college-football/teams/194"},
+  wolverines:{label:"Wolverines",lg:"ncaaf",path:"football/college-football/teams/130"},
+  hawkeyes:{label:"Hawkeyes",lg:"ncaaf",path:"football/college-football/teams/2294"},
+  huskers:{label:"Cornhuskers",lg:"ncaaf",path:"football/college-football/teams/158"}
+};
+// Teams follow the location you're viewing: nearest metro within ~170 miles.
+const METROS=[
+  {name:"Green Bay & Milwaukee",lat:44.2,lon:-88.2,teams:["packers","brewers","bucks","badgers"]},
+  {name:"Madison",lat:43.07,lon:-89.40,teams:["badgers","packers","brewers","bucks"]},
+  {name:"Twin Cities",lat:44.97,lon:-93.26,teams:["vikings","twins","wolves","gophers"]},
+  {name:"Chicago",lat:41.88,lon:-87.63,teams:["bears","cubs","whitesox","bulls"]},
+  {name:"Detroit",lat:42.33,lon:-83.05,teams:["lions","tigers","pistons","wolverines"]},
+  {name:"Cleveland",lat:41.50,lon:-81.69,teams:["browns","guardians","cavaliers","buckeyes"]},
+  {name:"Columbus",lat:39.96,lon:-82.99,teams:["buckeyes","bengals","cavaliers"]},
+  {name:"Cincinnati",lat:39.10,lon:-84.51,teams:["bengals","reds","buckeyes"]},
+  {name:"Indianapolis",lat:39.77,lon:-86.16,teams:["colts","pacers","reds"]},
+  {name:"St. Louis",lat:38.63,lon:-90.20,teams:["cardinals","illini"]},
+  {name:"Kansas City",lat:39.10,lon:-94.58,teams:["chiefs","royals"]},
+  {name:"Des Moines",lat:41.60,lon:-93.60,teams:["hawkeyes","cubs"]},
+  {name:"Omaha & Lincoln",lat:41.00,lon:-96.10,teams:["huskers","chiefs"]}
+];
+function miBetween(a,b,c,d){ const R=3958.8,t=x=>x*Math.PI/180;
+  const s=Math.sin(t(c-a)/2)**2+Math.cos(t(a))*Math.cos(t(c))*Math.sin(t(d-b)/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s)); }
+function teamsFor(place){
+  let best=null,bd=1e9;
+  for(const m of METROS){ const dd=miBetween(place.lat,place.lon,m.lat,m.lon); if(dd<bd){bd=dd;best=m;} }
+  return bd<=170 ? {metro:best.name, keys:best.teams} : {metro:null, keys:[]};
+}
+
+const _schedCache={};
+function withTimeout(p,ms){ return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]); }
+function fetchTeam(key){
+  if(_schedCache[key]) return _schedCache[key];
+  const t=TEAM_DB[key];
+  if(!t){ return Promise.resolve({key,label:key,lg:"nfl",emoji:"🏟️",tag:"",games:null}); }
+  const meta={key,label:t.label,lg:t.lg,emoji:LG[t.lg].emoji,tag:LG[t.lg].tag};
+  const url="https://site.api.espn.com/apis/site/v2/sports/"+t.path+"/schedule";
+  _schedCache[key]=(async()=>{
+    try{
+      const d=await withTimeout(getJSON(url),6500);
+      const abbr=(d.team&&d.team.abbreviation)||"";
+      const games=(d.events||[]).map(ev=>{
+        const c=(ev.competitions&&ev.competitions[0])||{}, comp=c.competitors||[];
+        let me=comp.find(x=>x.team&&abbr&&x.team.abbreviation===abbr);
+        if(!me) me=comp.find(x=>x.team&&(x.team.displayName||"").includes(t.label))||{};
+        const opp=comp.find(x=>x!==me)||{};
+        const st=(c.status&&c.status.type)||{};
+        return { date:new Date(ev.date), home:me.homeAway==="home",
+          opp:(opp.team&&(opp.team.shortDisplayName||opp.team.displayName||opp.team.abbreviation))||"TBD",
+          done:!!st.completed, state:st.state||"pre" };
+      }).filter(g=>!isNaN(+g.date)).sort((a,b)=>a.date-b.date);
+      return {...meta, games};
+    }catch(e){ return {...meta, games:null}; }
+  })();
+  return _schedCache[key];
+}
+function getSchedules(keys){ return Promise.all(keys.map(fetchTeam)); }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function teamStatus(team){
+  if(!team||!team.games) return {err:true};
+  const now=new Date();
+  const today=team.games.find(g=>sameDay(g.date,now)&&g.state!=="post") || team.games.find(g=>g.state==="in");
+  const next=team.games.find(g=>!g.done && g.date>=new Date(now.getTime()-3*3600*1000));
+  return {today, next};
+}
+function gameWatchCard(sched,tstat,metroName){
+  if(!sched.length) return `<div class="card"><h2>Game watch</h2><p>No teams mapped near here. Search a Midwest city or ZIP to follow its teams, or tap ⚾ in the header to hide sports.</p></div>`;
+  const rows=sched.map(t=>{
+    const s=tstat[t.key]||{err:true};
+    const name=`${t.emoji} ${esc(t.label)} <span class="lgtag">${t.tag}</span>`;
+    if(s.err){ return `<div class="game"><span class="gteam">${name}</span><div class="gmeta"><span>schedule unavailable</span></div></div>`; }
+    const g=s.today||s.next;
+    if(!g){ return `<div class="game"><span class="gteam">${name}</span><div class="gmeta"><span>offseason</span></div></div>`; }
+    const today=!!s.today, live=g.state==="in";
+    const vs=(g.home?"vs ":"@ ")+esc(g.opp);
+    const time=g.date.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    const when=live?"Live now":(today?("Today · "+time):(g.date.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+" · "+time));
+    return `<div class="game ${today?'today':''}"><span class="gteam">${name}</span>
+      <div class="gmeta"><b>${vs}</b><span>${when}</span></div>${today?`<span class="gbadge">${live?'Live':'Game day'}</span>`:''}</div>`;
+  }).join("");
+  return `<div class="card"><h2>Game watch${metroName?` · ${esc(metroName)}`:""}</h2><div class="games">${rows}</div>
+    <p class="disclaim">Live from ESPN · teams follow the location you're viewing.</p></div>`;
+}
+
+/* ================= Field & Stream: moon, solunar, pressure, hunt/fish ================= */
+const RAD=Math.PI/180, SYN=29.530588853;
+function toDays(ms){ return ms/86400000 - 10957.5; }
+function moonCoords(d){
+  const L=RAD*(218.316+13.176396*d), M=RAD*(134.963+13.064993*d), F=RAD*(93.272+13.229350*d);
+  const l=L+RAD*6.289*Math.sin(M), b=RAD*5.128*Math.sin(F), e=RAD*23.4397;
+  return { ra:Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(b)*Math.sin(e), Math.cos(l)),
+           dec:Math.asin(Math.sin(b)*Math.cos(e)+Math.cos(b)*Math.sin(e)*Math.sin(l)) };
+}
+function moonAlt(ms,lat,lng){
+  const lw=RAD*-lng, phi=RAD*lat, d=toDays(ms), c=moonCoords(d), st=RAD*(280.16+360.9856235*d)-lw, H=st-c.ra;
+  return Math.asin(Math.sin(phi)*Math.sin(c.dec)+Math.cos(phi)*Math.cos(c.dec)*Math.cos(H));
+}
+function moonPhase(ms){
+  const d=toDays(ms), M=RAD*(134.963+13.064993*d), Ms=RAD*(357.529+0.98560028*d),
+        L=RAD*(218.316+13.176396*d), Ls=RAD*(280.459+0.98564736*d);
+  const elong=(L+RAD*6.289*Math.sin(M))-(Ls+RAD*1.915*Math.sin(Ms));
+  const illum=Math.round(((1-Math.cos(elong))/2)*100);
+  let age=((ms-Date.UTC(2000,0,6,18,14))/86400000)%SYN; if(age<0) age+=SYN;
+  let name,emoji;
+  if(age<1.6||age>SYN-1.6){name="New moon";emoji="🌑";}
+  else if(Math.abs(age-SYN/2)<1.6){name="Full moon";emoji="🌕";}
+  else if(Math.abs(age-SYN/4)<1.6){name="First quarter";emoji="🌓";}
+  else if(Math.abs(age-3*SYN/4)<1.6){name="Last quarter";emoji="🌗";}
+  else if(age<SYN/4){name="Waxing crescent";emoji="🌒";}
+  else if(age<SYN/2){name="Waxing gibbous";emoji="🌔";}
+  else if(age<3*SYN/4){name="Waning gibbous";emoji="🌖";}
+  else {name="Waning crescent";emoji="🌘";}
+  return {name,emoji,illum,age};
+}
+function solunarStrength(age){
+  const d=Math.min(Math.min(age,SYN-age), Math.abs(age-SYN/2));
+  if(d<1.5) return {score:3,label:"Prime"};
+  if(d<3.5) return {score:2,label:"Good"};
+  if(d<5.5) return {score:1,label:"Fair"};
+  return {score:0,label:"Slow"};
+}
+function scanMoonDay(startUT,lat,lng){
+  let rise=null,set=null,peak=null,pa=-9,low=null,la=9, prev=moonAlt(startUT,lat,lng);
+  for(let m=10;m<=1440;m+=10){
+    const t=startUT+m*60000, alt=moonAlt(t,lat,lng);
+    if(prev<0&&alt>=0){ rise=t-600000+((-prev)/(alt-prev))*600000; }
+    if(prev>=0&&alt<0){ set=t-600000+((prev)/(prev-alt))*600000; }
+    if(alt>pa){pa=alt;peak=t;} if(alt<la){la=alt;low=t;}
+    prev=alt;
+  }
+  return {rise,set,transit:peak,antitransit:low};
+}
+function pressureInfo(fc){
+  const h=fc.hourly; if(!h||!h.pressure_msl) return null;
+  const off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off;
+  let i=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000); if(i<0) i=0;
+  const p=h.pressure_msl, a=Math.max(0,i-3), b=Math.min(p.length-1,i+3);
+  if(p[a]==null||p[b]==null) return {now:Math.round(p[i]||0),trend:"steady",arrow:"→",d6:0};
+  const d6=p[b]-p[a];
+  let trend,arrow;
+  if(d6<=-2){trend="falling";arrow="↓";} else if(d6<=-0.7){trend="easing down";arrow="↘";}
+  else if(d6>=2){trend="rising";arrow="↑";} else if(d6>=0.7){trend="easing up";arrow="↗";}
+  else {trend="steady";arrow="→";}
+  return {now:Math.round(p[i]),trend,arrow,d6:+d6.toFixed(1)};
+}
+function solunar(fc,lat,lng){
+  const offMs=(fc.utc_offset_seconds||0)*1000;
+  const startUT=Math.floor((Date.now()+offMs)/86400000)*86400000 - offMs;
+  const sc=scanMoonDay(startUT,lat,lng);
+  const ph=moonPhase(Date.now()), str=solunarStrength(ph.age);
+  const fmt=ms=> ms==null?"—":new Date(ms+offMs).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'});
+  const periods=[];
+  const add=(center,half,label,major)=>{ if(center==null) return;
+    periods.push({label,major,center,range:fmt(center-half*60000)+"–"+fmt(center+half*60000)}); };
+  add(sc.transit,60,"Major · moon overhead",true);
+  add(sc.antitransit,60,"Major · moon underfoot",true);
+  add(sc.rise,45,"Minor · moonrise",false);
+  add(sc.set,45,"Minor · moonset",false);
+  periods.sort((a,b)=>a.center-b.center);
+  const sr=fc.daily.sunrise?Date.parse(fc.daily.sunrise[0]+"Z"):null, ss=fc.daily.sunset?Date.parse(fc.daily.sunset[0]+"Z"):null;
+  const fl=ms=> ms==null?"—":new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'});
+  let overlap=false;
+  [sr,ss].forEach(s=>{ if(s==null) return; periods.forEach(p=>{ if(p.major && Math.abs((p.center+offMs)-s)<90*60000) overlap=true; }); });
+  return { phase:ph, strength:str, periods, overlap,
+    sun:{rise:fl(sr),set:fl(ss)},
+    dawn: sr!=null?(fl(sr-30*60000)+"–"+fl(sr+60*60000)):null,
+    dusk: ss!=null?(fl(ss-60*60000)+"–"+fl(ss+30*60000)):null };
+}
+function ratingOf(s){ if(s>=5) return {label:"Prime",vc:"go"}; if(s>=3) return {label:"Good",vc:"go"};
+  if(s>=1) return {label:"Fair",vc:"maybe"}; return {label:"Slow",vc:"no"}; }
+function fishingReport(x){
+  let s=x.sol.strength.score; if(x.sol.overlap) s+=1;
+  const p=x.pressure;
+  if(p){ if(p.d6<=-1.5) s+=2; else if(p.d6<=-0.5) s+=1; else if(p.d6>=2) s-=1; }
+  if([1,2,3,45,48,51,53,61,63,80].includes(x.code)) s+=1;
+  if(x.wind>=5&&x.wind<=15) s+=1; else if(x.wind>22) s-=1;
+  if(x.feels>=90) s-=1;
+  let why;
+  if(p&&p.d6<=-0.5) why="Pressure's dropping — fish feed hard ahead of a front. Go now, not tomorrow.";
+  else if(p&&p.d6>=2) why="High, rising pressure after a front — bluebird lockjaw. Fish deep, slow, and early.";
+  else if(x.wind>22) why="Too much wind to present anything cleanly. Tuck into a sheltered shoreline.";
+  else if(x.feels>=90) why="Hot and bright — dawn, dusk, and after dark are the whole game.";
+  else why="Middling conditions. Lean on the solunar windows and a little walleye chop.";
+  return {rating:ratingOf(s), why};
+}
+function huntingReport(x){
+  let s=x.sol.strength.score; if(x.sol.overlap) s+=1;
+  const p=x.pressure;
+  if(p){ if(p.d6>=1.5) s+=1; if(p.d6<=-1.5) s+=1; }
+  if(x.wind<8) s+=2; else if(x.wind<=15) s+=1; else if(x.wind>20) s-=2;
+  if(x.feels<=40) s+=1; if(x.feels>=68) s-=1;
+  if([65,75,82,86,95,96,99].includes(x.code)) s-=1;
+  let why;
+  if(x.wind>20) why="Wind's too high — deer bed down and your scent is everywhere. Tough sit.";
+  else if(p&&p.d6>=1.5&&x.feels<=45) why="Cold and clearing behind a front — textbook daylight deer movement. Get in the stand.";
+  else if(p&&p.d6<=-1.5) why="Front moving in — deer often feed hard just ahead of it. Last light could be stellar.";
+  else if(x.feels>=68) why="Warm for the season — mostly nocturnal movement. Hunt the edges of dawn and dusk.";
+  else if(x.wind<8) why="Light wind, manageable scent. Play the thermals and sit tight.";
+  else why="Workable. Mind your wind direction and hunt the solunar windows.";
+  return {rating:ratingOf(s), why};
+}
+
+/* ================= stay-home verdict ================= */
+function verdict(feels,pop,wind,gust,aqi,code,alertTier){
+  const reasons=[]; let score=0;
+  if(alertTier>=3){ score+=5; reasons.push("the National Weather Service is shouting"); }
+  else if(alertTier>=2){ score+=2; reasons.push("there's an active advisory"); }
+  if(feels<=-10){ score+=4; reasons.push("feels-like is in frostbite territory"); }
+  else if(feels<=5){ score+=2; reasons.push("it's brutally cold"); }
+  if(feels>=100){ score+=4; reasons.push("the heat index is a health hazard"); }
+  else if(feels>=92){ score+=2; reasons.push("it's oppressively hot"); }
+  if(gust>=50||wind>=40){ score+=3; reasons.push("the wind will relocate your patio furniture"); }
+  else if(wind>=28){ score+=1; reasons.push("it's seriously windy"); }
+  if(aqi!=null&&aqi>200){ score+=4; reasons.push("the air is genuinely unsafe"); }
+  else if(aqi!=null&&aqi>150){ score+=2; reasons.push("the air quality is rough"); }
+  if([82,95,96,99].includes(code)){ score+=3; reasons.push("there's a thunderstorm in the mix"); }
+  else if([65,75,86].includes(code)){ score+=2; reasons.push("precipitation is coming down hard"); }
+  if(pop>=80){ score+=1; reasons.push("it's almost certainly going to rain/snow on you"); }
+  let cls,title,blurb;
+  if(score>=5){ cls="no"; title="Stay home."; blurb="This is a blanket-and-takeout day — "+joinR(reasons)+". Whatever it is, it can wait."; }
+  else if(score>=2){ cls="maybe"; title="Your call, chief."; blurb="Going out is survivable, but "+joinR(reasons)+". Pack accordingly and lower your expectations."; }
+  else { cls="go"; title="Go live your life."; blurb=reasons.length? "Nothing dramatic out there — just "+joinR(reasons)+". Go be a person." : "Rare, suspicious, almost-perfect conditions. Get outside before the Midwest changes its mind."; }
+  return {cls,title,blurb};
+}
+function joinR(a){ if(!a.length) return ""; if(a.length===1) return a[0]; return a.slice(0,-1).join(", ")+" and "+a[a.length-1]; }
+
+function heroQuip(feels,temp,hum,wind,code,isDay){
+  if(feels<0) return "Feels like <b>"+Math.round(feels)+"°</b>. Your nose hairs are about to file a formal complaint. This is the cold that makes you question your life choices and your ZIP code.";
+  if(feels<20) return "A crisp <b>"+Math.round(feels)+"°</b> feels-like. Exposed skin is on a timer. Layer up like you're being deposed.";
+  if(feels>=100) return "Feels like <b>"+Math.round(feels)+"°</b> with "+hum+"% humidity — essentially a locker room that forgot to pay its AC bill. Hydrate or become beef jerky.";
+  if(feels>=90&&hum>=55) return "<b>"+Math.round(temp)+"°</b> and "+hum+"% humidity. The air is less 'weather' and more 'warm soup you have to walk through.' Shower, go outside, repeat.";
+  if(code>=95) return "Thunderstorms on deck. Nature's light show, admission free, seating indoors recommended.";
+  if([71,73,75,77,85,86].includes(code)) return "Snow's falling. Somewhere, four inches is being called 'a dusting' by someone insufferable. Drive like everyone around you forgot how.";
+  if(wind>=28) return "Wind's gusting hard enough to make your hair an independent variable. Hold onto small children and large hats.";
+  if(feels>=68&&feels<=80&&code<=2&&isDay) return "Genuinely, offensively pleasant — <b>"+Math.round(temp)+"°</b> and clear. Deeply suspicious for around here. Go outside before it's rescinded.";
+  if(code>=45&&code<=48) return "Fog's rolled in. Visibility: moody. Perfect weather for pretending you're in a prestige drama.";
+  return "<b>"+Math.round(temp)+"°</b>, "+wmo(code)[0].toLowerCase()+". Not dramatic enough for a story, not boring enough to ignore. Classic.";
+}
+
+/* ================= NWS alerts ================= */
+async function getAlerts(lat,lon){
+  try{
+    const d=await getJSON("https://api.weather.gov/alerts/active?status=actual&point="+lat.toFixed(4)+","+lon.toFixed(4));
+    return (d.features||[]).map(f=>f.properties).filter(p=>p&&p.event);
+  }catch(e){ return []; }
+}
+function sevClass(sev){ const s=(sev||"").toLowerCase();
+  if(s==="extreme") return "c-extreme"; if(s==="severe") return "c-severe"; if(s==="moderate") return "c-moderate"; return "c-minor"; }
+function sevTier(alerts){ let t=0; alerts.forEach(a=>{ const s=(a.severity||"").toLowerCase();
+  if(s==="extreme") t=Math.max(t,4); else if(s==="severe") t=Math.max(t,3); else if(s==="moderate") t=Math.max(t,2); else t=Math.max(t,1); }); return t; }
+
+/* ================= holidays (U.S.) ================= */
+function nthWeekday(y,m,wd,n){ let c=0; for(let d=1;d<=31;d++){ const dt=new Date(y,m,d); if(dt.getMonth()!==m) break; if(dt.getDay()===wd){ c++; if(c===n) return dt; } } return null; }
+function lastWeekday(y,m,wd){ let last=null; for(let d=1;d<=31;d++){ const dt=new Date(y,m,d); if(dt.getMonth()!==m) break; if(dt.getDay()===wd) last=dt; } return last; }
+function easter(y){ const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,mm=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*mm+114)/31),da=((h+l-7*mm+114)%31)+1; return new Date(y,mo-1,da); }
+function holidaysFor(y){
+  return [
+    ["New Year's Day",new Date(y,0,1),"🎉","newyear","New year, same weather patterns. Hydrate — yesterday was a lot."],
+    ["Groundhog Day",new Date(y,1,2),"🦫","none","A rodent has as much forecasting authority as some apps. Not this one."],
+    ["Valentine's Day",new Date(y,1,14),"❤️","hearts","Love's in the air; so is the cold front. Bring a coat to the date."],
+    ["St. Patrick's Day",new Date(y,2,17),"☘️","lucky","Wear green or get pinched. The wind pinches regardless."],
+    ["April Fools' Day",new Date(y,3,1),"🃏","none","The forecast is real. Everything else today is suspect."],
+    ["Easter",easter(y),"🐣","none","Pastels out — but keep the parka handy. Spring here is a rumor."],
+    ["Mother's Day",nthWeekday(y,4,0,2),"💐","hearts","Call your mother. She'll ask about your weather; now you know it."],
+    ["Memorial Day",lastWeekday(y,4,1),"🇺🇸","fireworks","Unofficial start of summer, official start of mosquito season."],
+    ["Juneteenth",new Date(y,5,19),"🕊️","none","A day to reflect — and it's finally warm. Go be outside."],
+    ["Father's Day",nthWeekday(y,5,0,3),"👔","none","Dad wants to grill regardless of the radar. Let him."],
+    ["Independence Day",new Date(y,6,4),"🎆","fireworks","Fireworks tonight — check the storm timing before you commit to the lawn chair."],
+    ["Labor Day",nthWeekday(y,8,1,1),"🛠️","none","Last hurrah of summer. Pretend you don't feel fall sneaking in."],
+    ["Halloween",new Date(y,9,31),"🎃","halloween","Costume over coat is a classic Midwest mistake. Plan the layers, trick-or-treaters."],
+    ["Thanksgiving",nthWeekday(y,10,4,4),"🦃","thanksgiving","Travel weather matters today. Check it before Aunt Linda calls about the roads."],
+    ["Christmas Eve",new Date(y,11,24),"🎄","christmas","Visions of sugarplums, odds of a white Christmas pending below."],
+    ["Christmas",new Date(y,11,25),"🎄","christmas","Merry Christmas. The snow's either magical or a travel nightmare — check below."],
+    ["New Year's Eve",new Date(y,11,31),"🥂","newyear","Dress warm for the countdown. Frostbite is a terrible way to start a year."]
+  ].map(h=>({name:h[0],date:h[1],emoji:h[2],theme:h[3],quip:h[4]})).filter(h=>h.date);
+}
+function nextHoliday(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const y=today.getFullYear();
+  const list=[...holidaysFor(y),...holidaysFor(y+1)].map(h=>{
+    const d=new Date(h.date); d.setHours(0,0,0,0);
+    return {...h, days:Math.round((d-today)/86400000)};
+  }).filter(h=>h.days>=0).sort((a,b)=>a.days-b.days);
+  return list[0]||null;
+}
+function renderHoliday(h){
+  if(!h){ holidayEl.hidden=true; return; }
+  const today=h.days===0;
+  holidayEl.hidden=false;
+  holidayEl.className="holiday"+(today?" today":"");
+  const cd = today ? `<b>Today</b>` : `<b>${h.days}</b>${h.days===1?"day":"days"}`;
+  holidayEl.innerHTML=`<div class="emo">${h.emoji}</div>
+    <div class="txt"><b>${today?"Happy "+esc(h.name)+"!":esc(h.name)}</b><span>${esc(h.quip)}</span></div>
+    <div class="cd">${today?"":"until "+esc(h.name).split("'")[0]}<br>${cd}</div>`;
+}
+
+/* ================= main fetch/render ================= */
+let _lastPlace=null;
+function sportsEnabled(){ try{ return localStorage.getItem("hwd.sports")!=="off"; }catch(e){ return true; } }
+
+async function go(place){
+  savePlace(place); _lastPlace=place; $("#q").value="";
+  showMsg('<span class="spin"></span>&nbsp;&nbsp;Reading the clouds over '+esc(place.name||"there")+"…",true);
+  alertsEl.hidden=true; alertsEl.innerHTML="";
+  const {lat,lon}=place;
+  const fUrl="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m"+
+    "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,weather_code,is_day,pressure_msl,wind_speed_10m"+
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunrise,sunset"+
+    "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=10";
+  const aUrl="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon+
+    "&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto";
+  try{
+    const tm = teamsFor(place);
+    const schedP = (sportsEnabled() && tm.keys.length) ? getSchedules(tm.keys) : Promise.resolve([]);
+    const [fc, air, alerts, schedules] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), schedP ]);
+    render(place, fc, air, alerts, {list:schedules, metro:tm.metro});
+  }catch(err){ showMsg("The forecast servers ghosted us. "+esc(err.message||"")+" — try again or pick another spot.",false); }
+}
+
+function dailyHumidity(fc){
+  const times=fc.hourly.time, rh=fc.hourly.relative_humidity_2m, out={};
+  for(let i=0;i<times.length;i++){ const day=times[i].slice(0,10); (out[day]=out[day]||[]).push(rh[i]); }
+  const avg={}; for(const d in out){ avg[d]=Math.round(out[d].reduce((a,b)=>a+b,0)/out[d].length); } return avg;
+}
+
+function hourlyCards(fc){
+  const h=fc.hourly, off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off;
+  let start=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000);
+  if(start<0) start=0;
+  const end=Math.min(start+24,h.time.length); let out="";
+  for(let i=start;i<end;i++){
+    const u=Date.parse(h.time[i]+"Z");
+    const label = i===start ? "Now" : new Date(u).toLocaleTimeString('en-US',{hour:'numeric',timeZone:'UTC'}).replace(" ","");
+    const code=h.weather_code[i], day=h.is_day?h.is_day[i]:1;
+    let [,ic]=wmo(code); if((code===0||code===1)&&!day) ic="🌙";
+    const t=Math.round(h.temperature_2m[i]);
+    const pop=Math.round(h.precipitation_probability?h.precipitation_probability[i]:0);
+    out+=`<div class="hour"><div class="hr">${label}</div><div class="hic" aria-hidden="true">${ic}</div>
+      <div class="ht">${t}°</div><div class="hp ${pop>=40?'wet':''}">${pop>0?('💧'+pop+'%'):'·'}</div></div>`;
+  }
+  return out;
+}
+
+function render(place, fc, air, alerts, sports){
+  const cur=fc.current, d=fc.daily;
+  const temp=cur.temperature_2m, feels=cur.apparent_temperature, hum=cur.relative_humidity_2m;
+  const wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code, isDay=cur.is_day===1;
+  const windDir=cur.wind_direction_10m;
+  const aqi = air && air.current ? air.current.us_aqi : null;
+  const pop0 = d.precipitation_probability_max ? d.precipitation_probability_max[0] : 0;
+  const uv0 = d.uv_index_max ? d.uv_index_max[0] : 0;
+  const tier = sevTier(alerts);
+  const [condLabel,glyph]=wmo(code);
+
+  const holi = nextHoliday();
+  renderHoliday(holi);
+  setScene(code, isDay, (holi && holi.days===0) ? holi.theme : null);
+
+  if(alerts.length){
+    alertsEl.hidden=false;
+    alertsEl.innerHTML=alerts.slice(0,4).map(a=>{
+      const cls=sevClass(a.severity), head=a.headline||a.event;
+      const body=(a.description||"").trim().replace(/\n{2,}/g,"\n").slice(0,600);
+      return `<details class="alert ${cls}" ${a.severity&&a.severity.toLowerCase()==="extreme"?"open":""}>
+        <summary class="top"><h3>⚠️ ${esc(a.event)}</h3><span class="sev">${esc(a.severity||"alert")}</span></summary>
+        <p>${esc(head)}</p>${body?`<p style="white-space:pre-wrap">${esc(body)}${a.description&&a.description.length>600?"…":""}</p>`:""}</details>`;
+    }).join("");
+  }
+
+  const vq=verdict(feels,pop0,wind,gust,aqi,code,tier);
+  const wear=dressFor(feels,pop0,wind,uv0,code);
+  const bbq=bbqReport(fc,cur);
+  const cat=aqiCat(aqi);
+  const aqiPct = aqi==null?0:Math.max(2,Math.min(100,(aqi/400)*100));
+  const dayHum=dailyHumidity(fc);
+  const now=new Date();
+
+  // seasonal smarts + team schedules
+  const SPORTS=sportsEnabled();
+  const sea=seasonInfo();
+  const sched = (sports&&sports.list)||[];
+  const metroName = sports&&sports.metro;
+  const tstat={}; sched.forEach(t=>{ tstat[t.key]=teamStatus(t); });
+  const todayLeagues=new Set(sched.filter(t=>tstat[t.key]&&tstat[t.key].today).map(t=>t.lg));
+  const footballToday=todayLeagues.has("nfl")||todayLeagues.has("ncaaf");
+  const baseballToday=todayLeagues.has("mlb");
+  const basketballToday=todayLeagues.has("nba");
+  const gameTodaySport = footballToday?"football":(baseballToday?"baseball":null);
+
+  let lines=sportsLines(feels,temp,wind,gust,pop0,code);
+  lines.forEach(l=>{
+    if(l.key==="baseball" && !sea.baseball){ l.text="Offseason. The only things flying are free-agent rumors and the grounds crew's day off."; l.lean="Offseason"; l.cls="push"; }
+    if(l.key==="football" && !sea.football){ l.text="Offseason. The tundra rests; mock drafts and regret fill the void."; l.lean="Offseason"; l.cls="push"; }
+    if(l.key==="golf" && !sea.golf){ l.text="Course would be frozen or underwater. This is a simulator-and-a-beer situation."; l.lean="Closed"; l.cls="push"; }
+    if(gameTodaySport && l.key===gameTodaySport){ l.text="🚨 Game day. "+l.text; }
+  });
+  if(basketballToday){ const bt=sched.find(t=>t.lg==="nba"&&tstat[t.key]&&tstat[t.key].today);
+    lines.push({icon:"🏀",sport:"Hoops",key:"hoops",lean:"Indoors",cls:"push",
+      text:"🚨 "+(bt?bt.label:"The local five")+" tonight — indoors, climate-controlled, gloriously weatherproof. No excuses."}); }
+  const otherTeam = sea.primary==="football"?"baseball":"football";
+  const ord=[]; const seenK=new Set();
+  [gameTodaySport, basketballToday?"hoops":null, sea.primary, otherTeam, "golf","tailgate","hoops"].forEach(k=>{ if(k&&!seenK.has(k)){ seenK.add(k); ord.push(k); } });
+  const rankK=k=>{ const i=ord.indexOf(k); return i<0?99:i; };
+  lines.sort((a,b)=>rankK(a.key)-rankK(b.key));
+
+  // field & stream
+  const pInfo=pressureInfo(fc);
+  const sol=solunar(fc, place.lat, place.lon);
+  const fish=fishingReport({feels,wind,code,pressure:pInfo,sol});
+  const hunt=huntingReport({feels,wind,code,pressure:pInfo,sol});
+
+  const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
+
+  content.innerHTML=`
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="glyph" aria-hidden="true">${glyph}</div>
+        <div>
+          <div class="place">${placeLabel}</div>
+          <div class="asof">As of ${now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})} · ${now.toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"})}</div>
+          <div class="nowtemp"><b>${Math.round(temp)}</b><span class="deg">°F</span></div>
+          <div class="cond">${esc(condLabel)}</div>
+          <div class="feels">Feels like ${Math.round(feels)}°</div>
+        </div>
+      </div>
+      <div class="nowstats">
+        ${chip("Humidity",hum+"%")}${chip("Wind",(windDir!=null?compass(windDir)+" ":"")+Math.round(wind)+" mph")}${chip("Gusts",Math.round(gust)+" mph")}
+        ${chip("Rain today",Math.round(pop0)+"%")}${chip("UV index",Math.round(uv0))}${chip("Air (AQI)", aqi==null?"—":Math.round(aqi))}
+      </div>
+      <div class="quip"><b>The read:</b> ${heroQuip(feels,temp,hum,wind,code,isDay)}</div>
+    </section>
+
+    <div class="grid">
+      <div class="card"><h2>Should you stay home?</h2><div class="verdict ${vq.cls}">${vq.title}</div><p>${vq.blurb}</p></div>
+      <div class="card"><h2>What to wear</h2><div class="verdict" style="font-size:1.15rem;color:var(--ink)">${wear.lead}</div>
+        <ul class="wear-list">${wear.items.map(i=>`<li>${i}</li>`).join("")}</ul></div>
+      <div class="card"><h2>Air quality · US AQI</h2>
+        <div class="aqi-num"><b style="color:${cat.color}">${aqi==null?"—":Math.round(aqi)}</b><span class="aqi-cat" style="color:${cat.color}">${cat.label}</span></div>
+        <div class="gauge"><div class="pin" style="left:${aqiPct}%"></div></div>
+        <p>${cat.note}${air&&air.current&&air.current.pm2_5!=null?` <span style="font-family:var(--mono);font-size:.78rem">PM2.5 ${Math.round(air.current.pm2_5)} µg/m³</span>`:""}</p></div>
+      <div class="card"><h2>Humidity &amp; comfort</h2><div class="verdict" style="font-size:1.6rem;color:var(--ink)">${hum}%</div>
+        <p>${humidityNote(hum,temp)}</p></div>
+      <div class="card"><h2>BBQ forecast</h2>
+        <div class="verdict ${bbq.vc}">${bbq.label}</div>
+        <p>${bbq.why}</p>
+        <p style="margin-top:8px">${bbq.window?`<b>Best window today:</b> ${bbq.window}`:`No clean grilling window left today — tomorrow's another cookout.`}</p>
+        <p class="disclaim" style="margin-top:10px">🔥 ${bbq.smoker}</p></div>
+    </div>
+
+    ${SPORTS?`
+    <div class="section-head"><h2>The Ballpark Report</h2><small>weather vs. the game</small><span class="season-tag">${sea.label}</span></div>
+    <div class="grid">
+      ${gameWatchCard(sched, tstat, metroName)}
+      <div class="card"><h2>The weather line</h2>
+        <div class="lines">${lines.map(l=>
+          `<div class="line"><span class="lg" aria-hidden="true">${l.icon}</span><div class="lx"><b>${l.sport}.</b> ${l.text}</div><span class="lean ${l.cls}">${l.lean}</span></div>`).join("")}</div>
+        <p class="disclaim">Entertainment only, not betting advice. The only lock is that the weather will let you down.</p></div>
+      <div class="card"><h2>Dressing for the bleachers</h2>
+        ${(()=>{const bp=bleacherWear(feels,pop0,wind,uv0,code,eveningFeels(fc));
+          return `<div class="verdict" style="font-size:1.1rem;color:var(--ink)">${bp.lead}</div>
+            <ul class="wear-list">${bp.items.map(i=>`<li>${i}</li>`).join("")}</ul>
+            ${bp.note?`<p>${bp.note}</p>`:""}`;})()}
+      </div>
+    </div>`:""}
+
+    <div class="section-head"><h2>Field &amp; Stream</h2><small>hunting &amp; fishing · solunar</small></div>
+    <div class="grid">
+      <div class="card"><h2>Fishing — the bite</h2>
+        <div class="verdict ${fish.rating.vc}">${fish.rating.label}</div>
+        <div class="factors">
+          <span class="factor">${sol.phase.emoji} ${esc(sol.phase.name)}</span>
+          ${pInfo?`<span class="factor">📊 ${pInfo.arrow} ${esc(pInfo.trend)} · ${pInfo.now} hPa</span>`:""}
+          <span class="factor">💨 ${(windDir!=null?compass(windDir)+" ":"")}${Math.round(wind)} mph</span>
+        </div>
+        <p>${fish.why}</p></div>
+
+      <div class="card"><h2>Hunting — deer movement</h2>
+        <div class="verdict ${hunt.rating.vc}">${hunt.rating.label}</div>
+        <div class="factors">
+          <span class="factor">🌬️ Wind ${(windDir!=null?compass(windDir)+" ":"")}${Math.round(wind)}</span>
+          ${pInfo?`<span class="factor">📊 ${pInfo.arrow} ${esc(pInfo.trend)}</span>`:""}
+          <span class="factor">🌡️ ${Math.round(feels)}° feels</span>
+          <span class="factor">${sol.phase.emoji} ${esc(sol.phase.name)}</span>
+        </div>
+        <p>${hunt.why}</p></div>
+
+      <div class="card"><h2>Solunar &amp; moon</h2>
+        <div class="moonbig"><div class="mp" aria-hidden="true">${sol.phase.emoji}</div>
+          <div class="mi"><b>${esc(sol.phase.name)}</b><span>${sol.phase.illum}% lit · feeding ${esc(sol.strength.label)}</span></div></div>
+        <div class="periods">
+          ${sol.periods.map(p=>`<div class="period ${p.major?'major':''}"><span class="pk">${esc(p.label)}</span><b>${p.range}</b></div>`).join("")}
+          <div class="period"><span class="pk">Dawn window</span><b>${sol.dawn||"—"}</b></div>
+          <div class="period"><span class="pk">Dusk window</span><b>${sol.dusk||"—"}</b></div>
+        </div>
+        <p class="disclaim">Sun ${sol.sun.rise}–${sol.sun.set}. Solunar windows computed from moon position — guides, not gospel.</p></div>
+    </div>
+
+    <div class="section-head"><h2>Today, Hour by Hour</h2><small>next 24 hours</small></div>
+    <div class="hours">${hourlyCards(fc)}</div>
+
+    <div class="section-head"><h2>The 10-Day</h2><small>what NOAA's models expect</small></div>
+    <div class="strip">${d.time.map((iso,i)=>dayCard(iso,i,d,dayHum)).join("")}</div>
+  `;
+  $("#srcLine").textContent="Pulled "+now.toLocaleString()+". Not a substitute for official warnings — if a siren goes off, don't finish reading this app.";
+}
+
+function chip(k,v){ return `<div class="chip"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+function humidityNote(h,t){
+  if(h>=80) return "Soup. The air is basically wet. Your hair has opinions and they're all frizzy.";
+  if(h>=65) return t>=78?"Sticky and warm — the kind of muggy that makes a cold shower feel like a personality.":"On the humid side. Clammy, not catastrophic.";
+  if(h>=40) return "Comfortable, actually. Enjoy this rare meteorological mercy.";
+  if(h>=25) return "Dry. Moisturizer and a water glass wouldn't hurt.";
+  return "Desert-dry. Static shocks incoming — stop touching doorknobs like a rookie.";
+}
+function dayCard(iso,i,d,dayHum){
+  const dt=new Date(iso+"T12:00:00");
+  const dow = i===0 ? "Today" : dt.toLocaleDateString([], {weekday:"short"});
+  const date = dt.toLocaleDateString([], {month:"numeric",day:"numeric"});
+  const [,ic]=wmo(d.weather_code[i]);
+  const hi=Math.round(d.temperature_2m_max[i]), lo=Math.round(d.temperature_2m_min[i]);
+  const pop=Math.round(d.precipitation_probability_max?d.precipitation_probability_max[i]:0);
+  const wind=Math.round(d.wind_speed_10m_max?d.wind_speed_10m_max[i]:0);
+  const hum=dayHum[iso]!=null?dayHum[iso]+"%":"—";
+  return `<div class="day"><div class="dow">${dow}</div><div class="date">${date}</div>
+    <div class="ic" aria-hidden="true">${ic}</div>
+    <div class="hl"><span class="hi">${hi}°</span> <span class="lo">${lo}°</span></div>
+    <div class="mini"><span>Rain <b>${pop}%</b></span><span>Wind <b>${wind}</b></span><span>Humid <b>${hum}</b></span></div></div>`;
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ======================================================================
+   SCENIC SKY — animated canvas backdrop driven by the live conditions
+   ====================================================================== */
+const sky=document.getElementById("sky"), sx=sky.getContext("2d");
+let W=0,H=0,DPR=1;
+let scene={kind:"clear",night:false,theme:null,flash:0,flashT:60};
+let L={stars:[],clouds:[],rain:[],snow:[],holi:[]};
+
+function kindOf(code){
+  if([95,96,99].includes(code)) return "thunder";
+  if([71,73,75,77,85,86].includes(code)) return "snow";
+  if([56,57,66,67].includes(code)) return "rain";
+  if([51,53,55,61,63,65,80,81,82].includes(code)) return "rain";
+  if([45,48].includes(code)) return "fog";
+  if(code===3) return "overcast";
+  if(code===2) return "cloudy";
+  if(code===1) return "mostly";
+  return "clear";
+}
+const THEME_CHARS={ halloween:["🎃","🦇","👻","🕸️"], hearts:["❤️","💕","🌹"], fireworks:["🎆","✨","🎇"],
+  lucky:["☘️","🍀","🌈"], christmas:["🎄","🎁","⭐","❄️"], newyear:["🎉","✨","🥂"], thanksgiving:["🍁","🦃","🌽"] };
+
+function hx(h){ h=h.replace("#",""); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function mix(c,f){ const [r,g,b]=hx(c); return `rgb(${Math.round(r*f)},${Math.round(g*f)},${Math.round(b*f)})`; }
+
+function skyColors(kind,night){
+  const day={ clear:["#4a90d9","#bfe0ff"], mostly:["#5a9bd8","#c6e2f5"], cloudy:["#7fa0c0","#cdd9e4"],
+    overcast:["#8a9aac","#c3ccd5"], rain:["#5b6b7d","#97a6b3"], thunder:["#3b4455","#6b7482"],
+    snow:["#9fb2c4","#dde7ef"], fog:["#9aa7af","#c9d1d5"] };
+  const nite={ clear:["#09102a","#1b2d55"], mostly:["#0b1430","#213357"], cloudy:["#141c2b","#2a3647"],
+    overcast:["#161d28","#29323f"], rain:["#10161f","#222e3c"], thunder:["#0d121c","#242c3a"],
+    snow:["#161f2e","#2e3d53"], fog:["#1b2227","#333d44"] };
+  return (night?nite:day)[kind]||(night?nite.clear:day.clear);
+}
+function groundPal(kind,night){
+  let back="#6ea15f", front="#466f44", tree="#2f4d2e";
+  if(kind==="snow"){ back="#cdd9e3"; front="#aebecb"; tree="#3a5240"; }
+  else if(kind==="rain"){ back="#51636b"; front="#374950"; tree="#28403a"; }
+  else if(kind==="thunder"){ back="#3c4654"; front="#28303c"; tree="#1e2a2a"; }
+  else if(kind==="overcast"||kind==="fog"){ back="#75897a"; front="#51675a"; tree="#324539"; }
+  if(night){ back=mix(front==="#466f44"?back:back,0.55); front=mix(front,0.5); tree=mix(tree,0.55);
+    if(kind==="snow"){ back="#415066"; front="#2c3a4e"; } }
+  return {back,front,tree};
+}
+
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  W=window.innerWidth; H=window.innerHeight;
+  sky.width=W*DPR; sky.height=H*DPR; sx.setTransform(DPR,0,0,DPR,0,0);
+  populate();
+}
+function rand(a,b){ return a+Math.random()*(b-a); }
+function populate(){
+  // stars
+  L.stars=[]; if(scene.night && ["clear","mostly","cloudy"].includes(scene.kind)){
+    const n=scene.kind==="clear"?90:(scene.kind==="mostly"?60:25);
+    for(let i=0;i<n;i++) L.stars.push({x:rand(0,W),y:rand(0,H*0.6),r:rand(.4,1.5),p:rand(0,6.28)});
+  }
+  // clouds
+  const cc={clear:0,mostly:2,cloudy:4,overcast:6,rain:5,thunder:5,snow:4,fog:3}[scene.kind]||0;
+  L.clouds=[]; for(let i=0;i<cc;i++){
+    const scale=rand(.7,1.5), y=rand(H*0.06,H*0.4);
+    const blobs=[[-1.6,.3],[-.6,-.3],[.4,-.45],[1.3,-.1],[.5,.35]].map(([a,b])=>[a*32*scale,b*32*scale,rand(20,30)*scale]);
+    L.clouds.push({x:rand(0,W),y,scale,speed:rand(.08,.28)*(scene.kind==="rain"||scene.kind==="thunder"?1.6:1),
+      alpha:rand(.55,.9),blobs});
+  }
+  // rain
+  L.rain=[]; if(scene.kind==="rain"||scene.kind==="thunder"){
+    const n=Math.round(W*(scene.kind==="thunder"?.28:.2));
+    for(let i=0;i<n;i++) L.rain.push({x:rand(0,W),y:rand(0,H),len:rand(9,18),sp:rand(7,12)});
+  }
+  // snow
+  L.snow=[]; if(scene.kind==="snow"){
+    const n=Math.round(W*.14);
+    for(let i=0;i<n;i++) L.snow.push({x:rand(0,W),y:rand(0,H),r:rand(1.4,3.4),sp:rand(.7,1.9),dr:rand(.3,1),p:rand(0,6.28)});
+  }
+  // holiday bits
+  L.holi=[]; if(scene.theme && THEME_CHARS[scene.theme]){
+    const chars=THEME_CHARS[scene.theme];
+    for(let i=0;i<12;i++) L.holi.push({x:rand(0,W),y:rand(0,H),sp:rand(.4,1.1),dr:rand(.4,1.2),p:rand(0,6.28),
+      ch:chars[i%chars.length],size:rand(16,30)});
+  }
+}
+
+function setScene(code,isDay,theme){
+  scene.kind=kindOf(code); scene.night=!isDay; scene.theme=theme||null;
+  populate();
+}
+
+function drawCelestial(){
+  const dim=["overcast","rain","thunder","snow","fog"].includes(scene.kind);
+  const cx=W*0.78, cy=H*0.2;
+  if(scene.night){
+    const glow=sx.createRadialGradient(cx,cy,0,cx,cy,120);
+    glow.addColorStop(0,"rgba(220,230,255,.35)"); glow.addColorStop(1,"rgba(220,230,255,0)");
+    sx.fillStyle=glow; sx.fillRect(cx-120,cy-120,240,240);
+    sx.beginPath(); sx.fillStyle=dim?"#c9d2e0":"#eef2fb"; sx.arc(cx,cy,26,0,6.2832); sx.fill();
+    sx.beginPath(); sx.fillStyle="rgba(150,165,190,.35)"; sx.arc(cx+9,cy-7,5,0,6.2832); sx.arc(cx-7,cy+6,3.5,0,6.2832); sx.fill();
+  }else{
+    const r=dim?30:40;
+    const grad=sx.createRadialGradient(cx,cy,0,cx,cy,r*4.5);
+    grad.addColorStop(0,dim?"rgba(255,244,210,.5)":"rgba(255,243,180,.95)");
+    grad.addColorStop(.25,"rgba(255,232,150,.3)"); grad.addColorStop(1,"rgba(255,232,150,0)");
+    sx.fillStyle=grad; sx.fillRect(cx-r*4.5,cy-r*4.5,r*9,r*9);
+    sx.beginPath(); sx.fillStyle=dim?"#f2e4ac":"#fff2bf"; sx.arc(cx,cy,r,0,6.2832); sx.fill();
+  }
+}
+function drawCloud(c){
+  sx.save(); sx.globalAlpha=c.alpha;
+  const top=c.y-34*c.scale, bot=c.y+30*c.scale;
+  const g=sx.createLinearGradient(0,top,0,bot);
+  if(scene.night){ g.addColorStop(0,"#525e6e"); g.addColorStop(1,"#39424f"); }
+  else if(scene.kind==="rain"||scene.kind==="thunder"||scene.kind==="overcast"){ g.addColorStop(0,"#d4dae1"); g.addColorStop(1,"#a7b2bd"); }
+  else { g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#d9e1e9"); }
+  sx.fillStyle=g;
+  c.blobs.forEach(([dx,dy,rr])=>{ sx.beginPath(); sx.arc(c.x+dx,c.y+dy,rr,0,6.2832); sx.fill(); });
+  sx.restore();
+}
+function drawHills(){
+  const g=groundPal(scene.kind,scene.night);
+  sx.fillStyle=g.back; sx.beginPath(); sx.moveTo(0,H);
+  const bB=H*0.74; for(let x=0;x<=W;x+=24) sx.lineTo(x,bB+Math.sin(x/W*6.283+1)*20);
+  sx.lineTo(W,H); sx.closePath(); sx.fill();
+  sx.fillStyle=g.front; sx.beginPath(); sx.moveTo(0,H);
+  const bF=H*0.85; for(let x=0;x<=W;x+=24) sx.lineTo(x,bF+Math.sin(x/W*9.42+3)*22);
+  sx.lineTo(W,H); sx.closePath(); sx.fill();
+  sx.fillStyle=g.tree; const n=Math.max(3,Math.floor(W/170));
+  for(let i=0;i<n;i++){ const tx=(i+0.5)*(W/n), ty=bF+Math.sin(tx/W*9.42+3)*22-2, s=9+(i%3)*4; drawFir(tx,ty,s); }
+}
+function drawFir(x,base,s){
+  sx.beginPath();
+  for(let t=0;t<3;t++){ const yy=base-t*s*0.9; sx.moveTo(x-s+t*s*0.28,yy); sx.lineTo(x,yy-s*1.3); sx.lineTo(x+s-t*s*0.28,yy); }
+  sx.fill();
+}
+
+function frame(){
+  if(!W){ requestAnimationFrame(frame); return; }
+  const [c1,c2]=skyColors(scene.kind,scene.night);
+  const g=sx.createLinearGradient(0,0,0,H); g.addColorStop(0,c1); g.addColorStop(1,c2);
+  sx.fillStyle=g; sx.fillRect(0,0,W,H);
+
+  // stars
+  for(const s of L.stars){ s.p+=0.02; sx.globalAlpha=0.5+Math.sin(s.p)*0.4;
+    sx.fillStyle="#fff"; sx.beginPath(); sx.arc(s.x,s.y,s.r,0,6.2832); sx.fill(); }
+  sx.globalAlpha=1;
+
+  drawCelestial();
+  for(const c of L.clouds){ if(!REDUCED){ c.x+=c.speed; if(c.x-80*c.scale>W) c.x=-80*c.scale; } drawCloud(c); }
+  drawHills();
+
+  // rain
+  if(L.rain.length){ sx.strokeStyle=scene.night?"rgba(150,175,205,.55)":"rgba(220,230,240,.7)"; sx.lineWidth=1.1;
+    sx.beginPath(); for(const d of L.rain){ sx.moveTo(d.x,d.y); sx.lineTo(d.x-2,d.y+d.len);
+      if(!REDUCED){ d.y+=d.sp; d.x-=0.4; if(d.y>H){ d.y=-d.len; d.x=rand(0,W); } } } sx.stroke(); }
+  // snow
+  if(L.snow.length){ sx.fillStyle="rgba(255,255,255,.9)";
+    for(const f of L.snow){ sx.beginPath(); sx.arc(f.x,f.y,f.r,0,6.2832); sx.fill();
+      if(!REDUCED){ f.p+=0.01; f.y+=f.sp; f.x+=Math.sin(f.p)*f.dr; if(f.y>H){ f.y=-4; f.x=rand(0,W); } } } }
+  // fog
+  if(scene.kind==="fog"){ for(let i=0;i<4;i++){ const y=H*0.4+i*H*0.12;
+      sx.fillStyle="rgba(210,214,216,"+(scene.night?0.05:0.12)+")"; sx.fillRect(0,y,W,H*0.14); }
+    sx.fillStyle=scene.night?"rgba(40,46,50,.25)":"rgba(220,224,226,.28)"; sx.fillRect(0,H*0.45,W,H*0.55); }
+
+  // thunder flash
+  if(scene.kind==="thunder" && !REDUCED){
+    scene.flashT--; if(scene.flashT<=0){ scene.flash=rand(.35,.7); scene.flashT=rand(70,200); }
+    if(scene.flash>0.01){ sx.fillStyle="rgba(255,255,255,"+scene.flash+")"; sx.fillRect(0,0,W,H*0.7); scene.flash*=0.8; }
+  }
+
+  // holiday bits
+  for(const b of L.holi){ sx.font=b.size+"px serif"; sx.textAlign="center"; sx.fillText(b.ch,b.x,b.y);
+    if(!REDUCED){ b.p+=0.02; b.y+=b.sp; b.x+=Math.sin(b.p)*b.dr; if(b.y>H+20){ b.y=-20; b.x=rand(0,W); } } }
+  sx.textAlign="start";
+
+  if(!REDUCED) requestAnimationFrame(frame);
+}
+
+window.addEventListener("resize",resize);
+resize();
+if(REDUCED){ // draw a few static frames so motion settles, then stop
+  let k=0; (function step(){ frame(); if(k++<3) setTimeout(step,0); })();
+} else { requestAnimationFrame(frame); }
+
+/* ================= boot ================= */
+(function(){
+  const saved=loadPlace();
+  go(saved || {name:"De Pere",admin1:"Wisconsin",country:"US",lat:44.4489,lon:-88.0604,label:"De Pere, Wisconsin, US"});
+})();
+</script>

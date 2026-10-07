@@ -1,0 +1,34 @@
+{
+  "name": "heartland-weather-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Heartland Weather Desk — a Midwest-tuned weather, sports, hunting/fishing and BBQ app. Web app plus Capacitor wrappers for iOS and Android.",
+  "author": "Michael Teske",
+  "license": "UNLICENSED",
+  "scripts": {
+    "sync:web": "node scripts/sync-web.mjs",
+    "copy": "npm run sync:web && cap copy",
+    "sync": "npm run sync:web && cap sync",
+    "add:ios": "cap add ios",
+    "add:android": "cap add android",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android",
+    "assets": "capacitor-assets generate"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/geolocation": "^6.0.1",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/local-notifications": "^6.1.0",
+    "@capacitor/preferences": "^6.0.2",
+    "@capacitor/push-notifications": "^6.0.2",
+    "@capacitor/splash-screen": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.2"
+  }
+}
