@@ -149,6 +149,22 @@
   .season-tag{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
     color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 8px;margin-left:auto}
 
+  /* Field & Stream */
+  .factors{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px}
+  .factor{display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:5px 9px;font-size:.8rem}
+  .periods{display:flex;flex-direction:column;gap:0;margin-top:6px}
+  .period{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:.86rem;
+    padding:7px 0;border-bottom:1px solid var(--line)}
+  .period:last-child{border-bottom:0}
+  .period .pk{font-family:var(--mono);font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  .period b{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .period.major b{color:var(--accent)}
+  .moonbig{display:flex;align-items:center;gap:13px;margin-top:2px}
+  .moonbig .mp{font-size:2.8rem;line-height:1}
+  .moonbig .mi b{font-family:var(--disp);font-weight:700;font-size:1.1rem;display:block}
+  .moonbig .mi span{font-size:.82rem;color:var(--ink-soft)}
+
   /* AQI gauge */
   .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
   .aqi-num b{font-family:var(--disp);font-weight:700;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
@@ -590,6 +606,124 @@ function gameWatchCard(sched,tstat,metroName){
     <p class="disclaim">Live from ESPN · teams follow the location you're viewing.</p></div>`;
 }
 
+/* ================= Field & Stream: moon, solunar, pressure, hunt/fish ================= */
+const RAD=Math.PI/180, SYN=29.530588853;
+function toDays(ms){ return ms/86400000 - 10957.5; }
+function moonCoords(d){
+  const L=RAD*(218.316+13.176396*d), M=RAD*(134.963+13.064993*d), F=RAD*(93.272+13.229350*d);
+  const l=L+RAD*6.289*Math.sin(M), b=RAD*5.128*Math.sin(F), e=RAD*23.4397;
+  return { ra:Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(b)*Math.sin(e), Math.cos(l)),
+           dec:Math.asin(Math.sin(b)*Math.cos(e)+Math.cos(b)*Math.sin(e)*Math.sin(l)) };
+}
+function moonAlt(ms,lat,lng){
+  const lw=RAD*-lng, phi=RAD*lat, d=toDays(ms), c=moonCoords(d), st=RAD*(280.16+360.9856235*d)-lw, H=st-c.ra;
+  return Math.asin(Math.sin(phi)*Math.sin(c.dec)+Math.cos(phi)*Math.cos(c.dec)*Math.cos(H));
+}
+function moonPhase(ms){
+  const d=toDays(ms), M=RAD*(134.963+13.064993*d), Ms=RAD*(357.529+0.98560028*d),
+        L=RAD*(218.316+13.176396*d), Ls=RAD*(280.459+0.98564736*d);
+  const elong=(L+RAD*6.289*Math.sin(M))-(Ls+RAD*1.915*Math.sin(Ms));
+  const illum=Math.round(((1-Math.cos(elong))/2)*100);
+  let age=((ms-Date.UTC(2000,0,6,18,14))/86400000)%SYN; if(age<0) age+=SYN;
+  let name,emoji;
+  if(age<1.6||age>SYN-1.6){name="New moon";emoji="🌑";}
+  else if(Math.abs(age-SYN/2)<1.6){name="Full moon";emoji="🌕";}
+  else if(Math.abs(age-SYN/4)<1.6){name="First quarter";emoji="🌓";}
+  else if(Math.abs(age-3*SYN/4)<1.6){name="Last quarter";emoji="🌗";}
+  else if(age<SYN/4){name="Waxing crescent";emoji="🌒";}
+  else if(age<SYN/2){name="Waxing gibbous";emoji="🌔";}
+  else if(age<3*SYN/4){name="Waning gibbous";emoji="🌖";}
+  else {name="Waning crescent";emoji="🌘";}
+  return {name,emoji,illum,age};
+}
+function solunarStrength(age){
+  const d=Math.min(Math.min(age,SYN-age), Math.abs(age-SYN/2));
+  if(d<1.5) return {score:3,label:"Prime"};
+  if(d<3.5) return {score:2,label:"Good"};
+  if(d<5.5) return {score:1,label:"Fair"};
+  return {score:0,label:"Slow"};
+}
+function scanMoonDay(startUT,lat,lng){
+  let rise=null,set=null,peak=null,pa=-9,low=null,la=9, prev=moonAlt(startUT,lat,lng);
+  for(let m=10;m<=1440;m+=10){
+    const t=startUT+m*60000, alt=moonAlt(t,lat,lng);
+    if(prev<0&&alt>=0){ rise=t-600000+((-prev)/(alt-prev))*600000; }
+    if(prev>=0&&alt<0){ set=t-600000+((prev)/(prev-alt))*600000; }
+    if(alt>pa){pa=alt;peak=t;} if(alt<la){la=alt;low=t;}
+    prev=alt;
+  }
+  return {rise,set,transit:peak,antitransit:low};
+}
+function pressureInfo(fc){
+  const h=fc.hourly; if(!h||!h.pressure_msl) return null;
+  const off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off;
+  let i=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000); if(i<0) i=0;
+  const p=h.pressure_msl, a=Math.max(0,i-3), b=Math.min(p.length-1,i+3);
+  if(p[a]==null||p[b]==null) return {now:Math.round(p[i]||0),trend:"steady",arrow:"→",d6:0};
+  const d6=p[b]-p[a];
+  let trend,arrow;
+  if(d6<=-2){trend="falling";arrow="↓";} else if(d6<=-0.7){trend="easing down";arrow="↘";}
+  else if(d6>=2){trend="rising";arrow="↑";} else if(d6>=0.7){trend="easing up";arrow="↗";}
+  else {trend="steady";arrow="→";}
+  return {now:Math.round(p[i]),trend,arrow,d6:+d6.toFixed(1)};
+}
+function solunar(fc,lat,lng){
+  const offMs=(fc.utc_offset_seconds||0)*1000;
+  const startUT=Math.floor((Date.now()+offMs)/86400000)*86400000 - offMs;
+  const sc=scanMoonDay(startUT,lat,lng);
+  const ph=moonPhase(Date.now()), str=solunarStrength(ph.age);
+  const fmt=ms=> ms==null?"—":new Date(ms+offMs).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'});
+  const periods=[];
+  const add=(center,half,label,major)=>{ if(center==null) return;
+    periods.push({label,major,center,range:fmt(center-half*60000)+"–"+fmt(center+half*60000)}); };
+  add(sc.transit,60,"Major · moon overhead",true);
+  add(sc.antitransit,60,"Major · moon underfoot",true);
+  add(sc.rise,45,"Minor · moonrise",false);
+  add(sc.set,45,"Minor · moonset",false);
+  periods.sort((a,b)=>a.center-b.center);
+  const sr=fc.daily.sunrise?Date.parse(fc.daily.sunrise[0]+"Z"):null, ss=fc.daily.sunset?Date.parse(fc.daily.sunset[0]+"Z"):null;
+  const fl=ms=> ms==null?"—":new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'});
+  let overlap=false;
+  [sr,ss].forEach(s=>{ if(s==null) return; periods.forEach(p=>{ if(p.major && Math.abs((p.center+offMs)-s)<90*60000) overlap=true; }); });
+  return { phase:ph, strength:str, periods, overlap,
+    sun:{rise:fl(sr),set:fl(ss)},
+    dawn: sr!=null?(fl(sr-30*60000)+"–"+fl(sr+60*60000)):null,
+    dusk: ss!=null?(fl(ss-60*60000)+"–"+fl(ss+30*60000)):null };
+}
+function ratingOf(s){ if(s>=5) return {label:"Prime",vc:"go"}; if(s>=3) return {label:"Good",vc:"go"};
+  if(s>=1) return {label:"Fair",vc:"maybe"}; return {label:"Slow",vc:"no"}; }
+function fishingReport(x){
+  let s=x.sol.strength.score; if(x.sol.overlap) s+=1;
+  const p=x.pressure;
+  if(p){ if(p.d6<=-1.5) s+=2; else if(p.d6<=-0.5) s+=1; else if(p.d6>=2) s-=1; }
+  if([1,2,3,45,48,51,53,61,63,80].includes(x.code)) s+=1;
+  if(x.wind>=5&&x.wind<=15) s+=1; else if(x.wind>22) s-=1;
+  if(x.feels>=90) s-=1;
+  let why;
+  if(p&&p.d6<=-0.5) why="Pressure's dropping — fish feed hard ahead of a front. Go now, not tomorrow.";
+  else if(p&&p.d6>=2) why="High, rising pressure after a front — bluebird lockjaw. Fish deep, slow, and early.";
+  else if(x.wind>22) why="Too much wind to present anything cleanly. Tuck into a sheltered shoreline.";
+  else if(x.feels>=90) why="Hot and bright — dawn, dusk, and after dark are the whole game.";
+  else why="Middling conditions. Lean on the solunar windows and a little walleye chop.";
+  return {rating:ratingOf(s), why};
+}
+function huntingReport(x){
+  let s=x.sol.strength.score; if(x.sol.overlap) s+=1;
+  const p=x.pressure;
+  if(p){ if(p.d6>=1.5) s+=1; if(p.d6<=-1.5) s+=1; }
+  if(x.wind<8) s+=2; else if(x.wind<=15) s+=1; else if(x.wind>20) s-=2;
+  if(x.feels<=40) s+=1; if(x.feels>=68) s-=1;
+  if([65,75,82,86,95,96,99].includes(x.code)) s-=1;
+  let why;
+  if(x.wind>20) why="Wind's too high — deer bed down and your scent is everywhere. Tough sit.";
+  else if(p&&p.d6>=1.5&&x.feels<=45) why="Cold and clearing behind a front — textbook daylight deer movement. Get in the stand.";
+  else if(p&&p.d6<=-1.5) why="Front moving in — deer often feed hard just ahead of it. Last light could be stellar.";
+  else if(x.feels>=68) why="Warm for the season — mostly nocturnal movement. Hunt the edges of dawn and dusk.";
+  else if(x.wind<8) why="Light wind, manageable scent. Play the thermals and sit tight.";
+  else why="Workable. Mind your wind direction and hunt the solunar windows.";
+  return {rating:ratingOf(s), why};
+}
+
 /* ================= stay-home verdict ================= */
 function verdict(feels,pop,wind,gust,aqi,code,alertTier){
   const reasons=[]; let score=0;
@@ -695,8 +829,8 @@ async function go(place){
   const {lat,lon}=place;
   const fUrl="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
     "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m"+
-    "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,weather_code,is_day"+
-    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max"+
+    "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,weather_code,is_day,pressure_msl"+
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunrise,sunset"+
     "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=10";
   const aUrl="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon+
     "&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto";
@@ -793,6 +927,12 @@ function render(place, fc, air, alerts, sports){
   const rankK=k=>{ const i=ord.indexOf(k); return i<0?99:i; };
   lines.sort((a,b)=>rankK(a.key)-rankK(b.key));
 
+  // field & stream
+  const pInfo=pressureInfo(fc);
+  const sol=solunar(fc, place.lat, place.lon);
+  const fish=fishingReport({feels,wind,code,pressure:pInfo,sol});
+  const hunt=huntingReport({feels,wind,code,pressure:pInfo,sol});
+
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
   content.innerHTML=`
@@ -841,6 +981,38 @@ function render(place, fc, air, alerts, sports){
             ${bp.note?`<p>${bp.note}</p>`:""}`;})()}
       </div>
     </div>`:""}
+
+    <div class="section-head"><h2>Field &amp; Stream</h2><small>hunting &amp; fishing · solunar</small></div>
+    <div class="grid">
+      <div class="card"><h2>Fishing — the bite</h2>
+        <div class="verdict ${fish.rating.vc}">${fish.rating.label}</div>
+        <div class="factors">
+          <span class="factor">${sol.phase.emoji} ${esc(sol.phase.name)}</span>
+          ${pInfo?`<span class="factor">📊 ${pInfo.arrow} ${esc(pInfo.trend)} · ${pInfo.now} hPa</span>`:""}
+          <span class="factor">💨 ${(windDir!=null?compass(windDir)+" ":"")}${Math.round(wind)} mph</span>
+        </div>
+        <p>${fish.why}</p></div>
+
+      <div class="card"><h2>Hunting — deer movement</h2>
+        <div class="verdict ${hunt.rating.vc}">${hunt.rating.label}</div>
+        <div class="factors">
+          <span class="factor">🌬️ Wind ${(windDir!=null?compass(windDir)+" ":"")}${Math.round(wind)}</span>
+          ${pInfo?`<span class="factor">📊 ${pInfo.arrow} ${esc(pInfo.trend)}</span>`:""}
+          <span class="factor">🌡️ ${Math.round(feels)}° feels</span>
+          <span class="factor">${sol.phase.emoji} ${esc(sol.phase.name)}</span>
+        </div>
+        <p>${hunt.why}</p></div>
+
+      <div class="card"><h2>Solunar &amp; moon</h2>
+        <div class="moonbig"><div class="mp" aria-hidden="true">${sol.phase.emoji}</div>
+          <div class="mi"><b>${esc(sol.phase.name)}</b><span>${sol.phase.illum}% lit · feeding ${esc(sol.strength.label)}</span></div></div>
+        <div class="periods">
+          ${sol.periods.map(p=>`<div class="period ${p.major?'major':''}"><span class="pk">${esc(p.label)}</span><b>${p.range}</b></div>`).join("")}
+          <div class="period"><span class="pk">Dawn window</span><b>${sol.dawn||"—"}</b></div>
+          <div class="period"><span class="pk">Dusk window</span><b>${sol.dusk||"—"}</b></div>
+        </div>
+        <p class="disclaim">Sun ${sol.sun.rise}–${sol.sun.set}. Solunar windows computed from moon position — guides, not gospel.</p></div>
+    </div>
 
     <div class="section-head"><h2>Today, Hour by Hour</h2><small>next 24 hours</small></div>
     <div class="hours">${hourlyCards(fc)}</div>
