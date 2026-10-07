@@ -21,6 +21,9 @@ no build, no dependencies, no API keys — plus a Capacitor wrapper for iOS/Andr
 - **BBQ forecast** — grill verdict + best grilling window today
 - **Share cards** — one-tap branded, team-colored image of the conditions or the active
   NWS alert (native share / Web Share API / download)
+- **Radar & maps** — interactive Leaflet map with animated **precipitation** radar
+  (RainViewer), **cloud** cover (infrared satellite), and **wind** (OpenWeatherMap;
+  set `OWM_KEY` in `index.html` to enable it)
 
 ## Sources
 - Official hazard alerts: [National Weather Service](https://www.weather.gov) (`api.weather.gov`)

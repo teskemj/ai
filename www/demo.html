@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   /* LAYOUT: a live scenic sky fills the screen; the current-conditions hero floats over it as glass, with solid panels below for the verdicts, an hour-by-hour strip, and the 10-day almanac. */
   :root{
@@ -219,6 +220,22 @@
   .menu .sw{width:14px;height:14px;border-radius:4px;flex:0 0 auto;border:1px solid rgba(0,0,0,.2)}
   .menu .hd{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding:8px 10px 4px}
 
+  /* radar & maps */
+  .radar-sheet{display:flex;flex-direction:column;width:100%;max-width:780px;height:88vh;max-height:860px;
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+  .radar-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .radar-top strong{font-family:var(--disp);font-weight:700;font-size:1.02rem}
+  .radar-top .x{position:static;margin-left:2px}
+  .layer-sel{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .layer-sel button{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;padding:7px 11px;border-radius:999px}
+  .layer-sel button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+  #map{flex:1;min-height:0;background:var(--panel-2)}
+  #map .leaflet-control-attribution{font-size:9px}
+  .radar-bottom{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+  #timeline{flex:1;min-width:0;accent-color:var(--accent)}
+  .tl-label{font-family:var(--mono);font-size:.7rem;color:var(--ink-soft);min-width:72px;text-align:right}
+  .map-note{font-size:.72rem;color:var(--ink-soft);padding:8px 14px 12px}
+
   /* AQI gauge */
   .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
   .aqi-num b{font-family:var(--disp);font-weight:700;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
@@ -291,6 +308,7 @@
       </form>
       <div id="sugg" hidden></div>
     </div>
+    <button id="radarBtn" class="icon" title="Radar & maps" aria-label="Radar and maps">🗺️</button>
     <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
     <button id="teamThemeBtn" class="icon" title="Background theme" aria-label="Background theme">🎨</button>
     <button id="proBtn" class="icon pro" title="Premium" aria-label="Premium features">Premium</button>
@@ -322,6 +340,28 @@
   </div>
 </div>
 
+<div id="radarModal" class="modal radar" hidden>
+  <div class="radar-sheet">
+    <div class="radar-top">
+      <strong>Radar &amp; maps</strong>
+      <div class="layer-sel">
+        <button data-layer="precip" class="sel">Precip</button>
+        <button data-layer="clouds">Clouds</button>
+        <button data-layer="wind">Wind</button>
+      </div>
+      <button class="x" data-radar-close aria-label="Close">×</button>
+    </div>
+    <div id="map"></div>
+    <div id="radarBottom" class="radar-bottom">
+      <button id="playBtn" class="icon" aria-label="Play radar loop">▶</button>
+      <input id="timeline" type="range" min="0" max="12" value="12" aria-label="Radar time">
+      <span id="timeLabel" class="tl-label">—</span>
+      <button id="recenterBtn" class="icon" title="Recenter" aria-label="Recenter">◎</button>
+    </div>
+    <div id="mapNote" class="map-note">Precipitation radar</div>
+  </div>
+</div>
+
 <main class="wrap">
   <div id="holiday" hidden></div>
   <div id="alerts" class="alerts" hidden></div>
@@ -335,6 +375,7 @@
   </footer>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
@@ -1651,6 +1692,75 @@ async function initPush(){
     await Push.register();
   }catch(e){ console.warn("initPush",e); }
 }
+
+/* ================= radar & weather maps ================= */
+const OWM_KEY=""; // optional: a free OpenWeatherMap key (openweathermap.org) enables the Wind layer
+let _map=null,_base=null,_overlay=null,_marker=null,_frames=[],_sat=[],_pastCount=0,_frameIdx=0,_playing=false,_playTimer=null,_curLayer="precip";
+function baseStyle(){ const r=document.documentElement.getAttribute("data-theme");
+  const dark=r==="dark"||(!r&&window.matchMedia("(prefers-color-scheme:dark)").matches); return dark?"dark_all":"light_all"; }
+function setBase(){ if(_base) _map.removeLayer(_base);
+  _base=window.L.tileLayer(`https://{s}.basemaps.cartocdn.com/${baseStyle()}/{z}/{x}/{y}{r}.png`,
+    {subdomains:"abcd",maxZoom:18,attribution:"&copy; OpenStreetMap &copy; CARTO"}).addTo(_map); }
+async function loadRadarFrames(){
+  try{
+    const d=await getJSON("https://api.rainviewer.com/public/weather-maps.json"), host=d.host;
+    const past=(d.radar&&d.radar.past)||[], now=(d.radar&&d.radar.nowcast)||[];
+    _pastCount=past.length;
+    _frames=past.concat(now).map(f=>({time:f.time,url:`${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`}));
+    _sat=((d.satellite&&d.satellite.infrared)||[]).map(f=>({time:f.time,url:`${host}${f.path}/256/{z}/{x}/{y}/0/0_0.png`}));
+    _frameIdx=Math.max(0,_pastCount-1);
+  }catch(e){ _frames=[]; _sat=[]; }
+}
+function showFrame(i){
+  if(!_frames.length) return;
+  _frameIdx=((i%_frames.length)+_frames.length)%_frames.length;
+  if(_overlay) _map.removeLayer(_overlay);
+  _overlay=window.L.tileLayer(_frames[_frameIdx].url,{opacity:0.78,maxZoom:12,zIndex:400}).addTo(_map);
+  const t=new Date(_frames[_frameIdx].time*1000), lbl=$("#timeLabel");
+  if(lbl) lbl.textContent=t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+(_frameIdx>=_pastCount?" ·fcst":"");
+  const sl=$("#timeline"); if(sl){ sl.max=_frames.length-1; sl.value=_frameIdx; }
+}
+function stopPlay(){ _playing=false; if(_playTimer) clearInterval(_playTimer); _playTimer=null; const b=$("#playBtn"); if(b) b.textContent="▶"; }
+function playRadar(){ if(_playing||!_frames.length) return; _playing=true; const b=$("#playBtn"); if(b) b.textContent="⏸"; _playTimer=setInterval(()=>showFrame(_frameIdx+1),600); }
+function selectLayer(kind){
+  _curLayer=kind; stopPlay();
+  document.querySelectorAll("[data-layer]").forEach(b=>b.classList.toggle("sel",b.dataset.layer===kind));
+  if(_overlay){ _map.removeLayer(_overlay); _overlay=null; }
+  const bottom=$("#radarBottom"), note=$("#mapNote");
+  if(kind==="precip"){ if(bottom) bottom.style.display="";
+    if(_frames.length){ showFrame(_frameIdx); note.textContent="Precipitation radar · RainViewer"; }
+    else note.textContent="Radar unavailable right now.";
+  } else if(kind==="clouds"){ if(bottom) bottom.style.display="none";
+    const f=_sat.length?_sat[_sat.length-1]:null;
+    if(f){ _overlay=window.L.tileLayer(f.url,{opacity:0.68,maxZoom:12,zIndex:400}).addTo(_map); note.textContent="Cloud cover · infrared satellite (RainViewer)"; }
+    else note.textContent="Cloud layer unavailable right now.";
+  } else { if(bottom) bottom.style.display="none";
+    if(OWM_KEY){ _overlay=window.L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`,{opacity:0.7,maxZoom:12,zIndex:400}).addTo(_map); note.textContent="Wind · OpenWeatherMap"; }
+    else note.textContent="Wind layer needs a free OpenWeatherMap key — set OWM_KEY in the code.";
+  }
+}
+async function openRadar(){
+  const m=$("#radarModal"); m.hidden=false;
+  if(!window.L){ $("#mapNote").textContent="Map library didn't load — check your connection."; return; }
+  if(!_map){ _map=window.L.map("map",{zoomControl:true}).setView([44.45,-88.06],7); setBase(); }
+  const p=_lastPlace||{lat:44.4489,lon:-88.0604};
+  _map.setView([p.lat,p.lon],7);
+  if(!_marker) _marker=window.L.circleMarker([p.lat,p.lon],{radius:6,color:"#fff",weight:2,fillColor:"#1f6f8b",fillOpacity:1});
+  _marker.setLatLng([p.lat,p.lon]).addTo(_map);
+  setTimeout(()=>_map.invalidateSize(),80);
+  if(!_frames.length && !_sat.length) await loadRadarFrames();
+  selectLayer(_curLayer);
+}
+(function(){
+  const rb=$("#radarBtn"); if(rb) rb.addEventListener("click",openRadar);
+  const m=$("#radarModal"); if(!m) return;
+  m.addEventListener("click",e=>{ if(e.target===m){ stopPlay(); m.hidden=true; } });
+  m.querySelectorAll("[data-radar-close]").forEach(b=>b.addEventListener("click",()=>{ stopPlay(); m.hidden=true; }));
+  m.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>selectLayer(b.dataset.layer)));
+  const pb=$("#playBtn"); if(pb) pb.addEventListener("click",()=>{ _playing?stopPlay():playRadar(); });
+  const sl=$("#timeline"); if(sl) sl.addEventListener("input",()=>{ stopPlay(); showFrame(+sl.value); });
+  const rc=$("#recenterBtn"); if(rc) rc.addEventListener("click",()=>{ const p=_lastPlace||{lat:44.45,lon:-88.06}; if(_map) _map.setView([p.lat,p.lon],7); });
+})();
 
 /* ================= boot ================= */
 (function(){
