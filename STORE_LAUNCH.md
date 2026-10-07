@@ -16,21 +16,23 @@ sources and what that means:
 
 Don't skip this. It's the difference between a side project and a takedown notice.
 
-## 1. Free vs. Pro split
-Ship free, sell the sticky stuff.
+## 1. Free vs. Premium split
+Free is genuinely useful: **weather + local sports**. Premium unlocks everything else.
 
-**Free**
-- Current conditions, 10-day, hourly, air quality, humidity
-- Scenic backdrop, holidays, one saved location
-- BBQ verdict (today only)
+**Free — weather & local sports**
+- Current conditions, hourly, 10-day, air quality, humidity
+- Extreme-weather alerts, what-to-wear, stay-home verdict
+- Realistic scenic background, auto-colored by your local team (by ZIP)
+- Holidays banner
+- Local sports: Game Watch schedules, the weather line, bleacher attire
 
-**Pro — subscription**
-- 🔔 **Severe-weather push alerts** (the #1 reason weather apps get paid for)
-- 📍 Unlimited saved locations
-- 🦌🎣 Full hunting/fishing solunar + pressure tools **and alerts**
-- 🔥 BBQ/grill planner with "good window opens at 4 PM" reminders
-- 🏈 Game-day + tailgate notifications
-- 🚫 Ad-free
+**Premium — unlocks everything**
+- 🔥 **BBQ forecast** — grill verdict + best window
+- ⛳ **Golf forecast** — tee-time playability + best window
+- 🦌🎣 **Field & Stream** — fishing/hunting ratings, solunar windows, moon, pressure trend
+- 🎨 **Team backgrounds** — hand-pick any team's colors
+- 🔔 **Severe-weather push alerts** (native app; the #1 paid feature)
+- 📍 Unlimited saved locations · 🏈 game-day/tailgate reminders · 🚫 ad-free
 
 ## 2. Pricing
 - **Freemium + annual subscription** is the best fit: **$2.99/mo or $19.99/yr**, with a 7-day trial.

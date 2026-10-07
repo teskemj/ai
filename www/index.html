@@ -278,7 +278,7 @@
     </div>
     <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
     <button id="teamThemeBtn" class="icon" title="Background theme" aria-label="Background theme">🎨</button>
-    <button id="proBtn" class="icon pro" title="Pro" aria-label="Pro features">Pro</button>
+    <button id="proBtn" class="icon pro" title="Premium" aria-label="Premium features">Premium</button>
     <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
     <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
     <div id="themeMenu" hidden></div>
@@ -288,14 +288,15 @@
 <div id="proModal" class="modal" hidden>
   <div class="sheet">
     <button class="x" data-pro-close aria-label="Close">×</button>
-    <h2>Heartland Weather Desk <span class="pro-tag">Pro</span></h2>
-    <p class="lede">Unlock the outdoor-recreation tools.</p>
-    <div class="pro-on-note">✓ You're on <b>Pro</b> — all outdoor tools are unlocked. Thanks!</div>
+    <h2>Heartland Weather Desk <span class="pro-tag">Premium</span></h2>
+    <p class="lede">Free gives you weather &amp; local sports. Premium unlocks everything else.</p>
+    <div class="pro-on-note">✓ You're on <b>Premium</b> — everything's unlocked. Thanks!</div>
     <ul class="feat">
-      <li>⛳ <b>Golf forecast</b> — tee-time playability &amp; the best window today</li>
+      <li>🔥 <b>BBQ forecast</b> — grill verdict &amp; the best window today</li>
+      <li>⛳ <b>Golf forecast</b> — tee-time playability &amp; best window</li>
       <li>🎣 <b>Fishing</b> — bite rating &amp; solunar feeding windows</li>
-      <li>🦌 <b>Hunting</b> — deer-movement rating</li>
-      <li>🌙 <b>Moon phase</b> &amp; barometric pressure trend</li>
+      <li>🦌 <b>Hunting</b> — deer-movement rating, moon &amp; pressure</li>
+      <li>🎨 <b>Team backgrounds</b> — set any team's colors by hand</li>
     </ul>
     <div class="price">$19.99<span>per year · or $2.99/mo · 7-day free trial</span></div>
     <button class="primary big" data-pro-unlock>Start free trial</button>
@@ -357,7 +358,7 @@ function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||
 /* ================= Pro entitlement ================= */
 function isPro(){ try{ return localStorage.getItem("hwd.pro")==="1"; }catch(e){ return false; } }
 function setPro(v){ try{ localStorage.setItem("hwd.pro", v?"1":"0"); }catch(e){} }
-function updateProBtn(){ const b=$("#proBtn"); if(!b) return; b.classList.toggle("on",isPro()); b.textContent=isPro()?"Pro ✓":"Pro"; }
+function updateProBtn(){ const b=$("#proBtn"); if(!b) return; b.classList.toggle("on",isPro()); b.textContent=isPro()?"Premium ✓":"Premium"; }
 function openPro(){ const m=$("#proModal"); m.classList.toggle("is-pro",isPro()); m.hidden=false; }
 document.addEventListener("click",e=>{
   if(e.target.closest("[data-pro-open]")) openPro();
@@ -389,7 +390,9 @@ const TEAM_THEMES={
 };
 function themeSel(){ try{ return localStorage.getItem("hwd.themeTeam")||"auto"; }catch(e){ return "auto"; } }
 function resolveThemeKey(place){
-  const sel=themeSel();
+  let sel=themeSel();
+  // picking a specific team is Premium; free users fall back to Auto (still colored by ZIP)
+  if(sel!=="auto" && sel!=="default" && !isPro()) sel="auto";
   if(sel!=="auto") return TEAM_THEMES[sel]?sel:"default";
   if(place){ const t=teamsFor(place); const k=(t.keys||[]).find(k=>TEAM_THEMES[k]); if(k) return k; }
   return "default";
@@ -406,18 +409,21 @@ function applyTheme(place){
 (function(){
   const btn=$("#teamThemeBtn"), menu=$("#themeMenu");
   function build(){
-    const sel=themeSel();
+    const sel=themeSel(), pro=isPro();
     let html=`<div class="hd">Background theme</div>`;
-    const row=(key,label)=>{ const th=TEAM_THEMES[key]; const sw=th?`<span class="sw" style="background:${th.p}"></span>`:`<span class="sw" style="background:linear-gradient(135deg,#1f6f8b,#56b6cf)"></span>`;
-      return `<button data-theme="${key}" class="${sel===key?'sel':''}">${key==='auto'?'<span class="sw" style="background:linear-gradient(135deg,#888,#ccc)"></span>':sw}${esc(label)}</button>`; };
-    html+=row("auto","Auto — local team");
-    html+=row("default","Default (Heartland)");
-    html+=`<div class="hd">Teams</div>`;
-    Object.keys(TEAM_THEMES).filter(k=>k!=="default").forEach(k=>{ html+=row(k,TEAM_THEMES[k].name); });
+    const row=(key,label,lock)=>{ const th=TEAM_THEMES[key];
+      const sw=key==='auto'?`<span class="sw" style="background:linear-gradient(135deg,#888,#ccc)"></span>`
+        :(th?`<span class="sw" style="background:${th.p}"></span>`:`<span class="sw" style="background:linear-gradient(135deg,#1f6f8b,#56b6cf)"></span>`);
+      return `<button data-theme="${key}"${lock?' data-lock="1"':''} class="${sel===key?'sel':''}">${sw}${esc(label)}${lock?' 🔒':''}</button>`; };
+    html+=row("auto","Auto — local team",false);
+    html+=row("default","Default (Heartland)",false);
+    html+=`<div class="hd">Teams${pro?"":" · Premium"}</div>`;
+    Object.keys(TEAM_THEMES).filter(k=>k!=="default").forEach(k=>{ html+=row(k,TEAM_THEMES[k].name,!pro); });
     menu.innerHTML=html; menu.className="menu";
   }
   btn.addEventListener("click",e=>{ e.stopPropagation(); if(menu.hidden){ build(); menu.hidden=false; } else menu.hidden=true; });
   menu.addEventListener("click",e=>{ const b=e.target.closest("button[data-theme]"); if(!b) return;
+    if(b.dataset.lock){ menu.hidden=true; openPro(); return; }
     try{ localStorage.setItem("hwd.themeTeam",b.dataset.theme); }catch(err){}
     menu.hidden=true; applyTheme(_lastPlace); });
   document.addEventListener("click",e=>{ if(!e.target.closest("#themeMenu") && !e.target.closest("#teamThemeBtn")) menu.hidden=true; });
@@ -645,6 +651,13 @@ function golfReport(fc,cur){
   if(bestA>=0){ const fl=ms=>new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',timeZone:'UTC'});
     window=fl(Date.parse(h.time[bestA]+"Z"))+"–"+fl(Date.parse(h.time[bestB]+"Z")+3600000); }
   return {label,vc,why,window,wind:Math.round(wind),gust:Math.round(gust)};
+}
+
+/* ================= Premium locked-card teaser ================= */
+function lockedCard(title,blurb){
+  return `<div class="card locked"><div class="lockwrap"><span class="lockicon">🔒</span>
+    <h2>${esc(title)} <span class="pro-tag">Premium</span></h2><p>${esc(blurb)}</p>
+    <button class="primary" data-pro-open>Unlock Premium</button></div></div>`;
 }
 
 function sportsLines(feels,temp,wind,gust,pop,code){
@@ -1093,7 +1106,8 @@ function render(place, fc, air, alerts, sports){
 
   const vq=verdict(feels,pop0,wind,gust,aqi,code,tier);
   const wear=dressFor(feels,pop0,wind,uv0,code);
-  const bbq=bbqReport(fc,cur);
+  const pro=isPro();
+  const bbq=pro?bbqReport(fc,cur):null;
   const cat=aqiCat(aqi);
   const aqiPct = aqi==null?0:Math.max(2,Math.min(100,(aqi/400)*100));
   const dayHum=dailyHumidity(fc);
@@ -1130,9 +1144,8 @@ function render(place, fc, air, alerts, sports){
   // background theme follows the location (or the user's chosen team)
   applyTheme(place);
 
-  // Pro outdoor tools (golf + field & stream) — gated
-  const pro=isPro();
-  lines=lines.filter(l=>l.key!=="golf"); // golf graduated to the Pro Golf forecast
+  // Premium outdoor tools (golf + field & stream) — gated
+  lines=lines.filter(l=>l.key!=="golf"); // golf graduated to the Premium Golf forecast
   let golf,pInfo,sol,fish,hunt;
   if(pro){
     golf=golfReport(fc,cur);
@@ -1173,11 +1186,12 @@ function render(place, fc, air, alerts, sports){
         <p>${cat.note}${air&&air.current&&air.current.pm2_5!=null?` <span style="font-family:var(--mono);font-size:.78rem">PM2.5 ${Math.round(air.current.pm2_5)} µg/m³</span>`:""}</p></div>
       <div class="card"><h2>Humidity &amp; comfort</h2><div class="verdict" style="font-size:1.6rem;color:var(--ink)">${hum}%</div>
         <p>${humidityNote(hum,temp)}</p></div>
-      <div class="card"><h2>BBQ forecast</h2>
+      ${pro ? `<div class="card"><h2>BBQ forecast</h2>
         <div class="verdict ${bbq.vc}">${bbq.label}</div>
         <p>${bbq.why}</p>
         <p style="margin-top:8px">${bbq.window?`<b>Best window today:</b> ${bbq.window}`:`No clean grilling window left today — tomorrow's another cookout.`}</p>
-        <p class="disclaim" style="margin-top:10px">🔥 ${bbq.smoker}</p></div>
+        <p class="disclaim" style="margin-top:10px">🔥 ${bbq.smoker}</p></div>`
+      : lockedCard("BBQ forecast","Grill verdict, the best grilling window today, and a low-and-slow smoker note.")}
     </div>
 
     ${SPORTS?`
@@ -1196,7 +1210,7 @@ function render(place, fc, air, alerts, sports){
       </div>
     </div>`:""}
 
-    <div class="section-head"><h2>Field &amp; Stream</h2><small>golf · hunting · fishing · solunar</small><span class="pro-tag">Pro</span></div>
+    <div class="section-head"><h2>Field &amp; Stream</h2><small>golf · hunting · fishing · solunar</small><span class="pro-tag">Premium</span></div>
     ${pro ? `<div class="grid">
       <div class="card"><h2>Golf — playability</h2>
         <div class="verdict ${golf.vc}">${golf.label}</div>
