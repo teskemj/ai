@@ -1,7 +1,8 @@
-// Copies the canonical web app (root index.html) into the Capacitor webDir (www/).
+// Copies the canonical web app (root index.html) into the Capacitor webDir (www/),
+// and generates a paywall-free demo build (demo.html) from the same source.
 // Edit index.html at the repo root — it's the single source of truth and also what
 // GitHub Pages serves. Run `npm run sync:web` before `npx cap copy` / `npx cap sync`.
-import { copyFileSync, mkdirSync, existsSync } from "node:fs";
+import { copyFileSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs";
 
 mkdirSync("www", { recursive: true });
 
@@ -10,5 +11,12 @@ if (!existsSync("index.html")) {
   process.exit(1);
 }
 
+const src = readFileSync("index.html", "utf8");
 copyFileSync("index.html", "www/index.html");
-console.log("✓ Synced index.html → www/index.html");
+
+// Demo build: everything unlocked, no paywall UI (for marketing, investors, store review).
+const demo = "<script>window.HWD_DEMO=true;</script>\n" + src;
+writeFileSync("demo.html", demo);
+writeFileSync("www/demo.html", demo);
+
+console.log("✓ Synced index.html → www/index.html  (+ demo.html paywall-free build)");

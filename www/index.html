@@ -305,7 +305,7 @@
       <li>🦌 <b>Hunting</b> — deer-movement rating, moon &amp; pressure</li>
       <li>🎨 <b>Team backgrounds</b> — set any team's colors by hand</li>
     </ul>
-    <div class="price">$19.99<span>per year · or $2.99/mo · 7-day free trial, cancel anytime</span></div>
+    <div class="price">$19.99<span>per year · or $2.99/mo · 14-day free trial, cancel anytime</span></div>
     <button class="primary big" data-pro-unlock>Keep Premium</button>
     <button class="ghost" data-pro-preview>Just preview it (no purchase)</button>
     <button class="ghost" data-pro-lock>Turn off Premium (demo)</button>
@@ -332,6 +332,8 @@
 const $ = s => document.querySelector(s);
 const content = $("#content"), alertsEl = $("#alerts"), holidayEl = $("#holiday");
 const REDUCED = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+// Demo mode: everything unlocked, no paywall UI. Enabled by demo.html or ?demo / #demo.
+const DEMO = (typeof window!=="undefined" && window.HWD_DEMO===true) || /\bdemo\b/i.test(location.search+" "+location.hash);
 
 /* ================= persistence ================= */
 function savePlace(p){ try{ localStorage.setItem("hwd.place", JSON.stringify(p)); }catch(e){} }
@@ -369,12 +371,12 @@ function setPro(v){ try{ localStorage.setItem("hwd.pro", v?"1":"0"); }catch(e){}
 function isPreview(){ try{ return sessionStorage.getItem("hwd.preview")==="1"; }catch(e){ return false; } }
 function setPreview(v){ try{ v?sessionStorage.setItem("hwd.preview","1"):sessionStorage.removeItem("hwd.preview"); }catch(e){} }
 /* Reverse trial: every new visitor gets full access for TRIAL_DAYS, then free tier. */
-const TRIAL_DAYS=7;
+const TRIAL_DAYS=14;
 function firstSeen(){ try{ let v=localStorage.getItem("hwd.first"); if(!v){ v=String(Date.now()); localStorage.setItem("hwd.first",v); } return +v; }catch(e){ return Date.now(); } }
 function trialMsLeft(){ return TRIAL_DAYS*86400000 - (Date.now()-firstSeen()); }
 function inTrial(){ return !isPro() && trialMsLeft()>0; }
 function trialDaysLeft(){ return Math.max(1, Math.ceil(trialMsLeft()/86400000)); }
-function premiumUnlocked(){ return isPro()||inTrial()||isPreview(); }
+function premiumUnlocked(){ return DEMO||isPro()||inTrial()||isPreview(); }
 function updateProBtn(){ const b=$("#proBtn"); if(!b) return; const pro=isPro(); b.classList.toggle("on",pro);
   b.textContent=pro?"Premium ✓":"Premium";
   b.title=pro?"Premium active":(inTrial()?`Premium trial — ${trialDaysLeft()} days left`:"Premium"); }
@@ -1179,7 +1181,7 @@ function render(place, fc, air, alerts, sports){
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
   content.innerHTML=`
-    ${ isPro() ? "" : inTrial()
+    ${ (DEMO||isPro()) ? "" : inTrial()
         ? `<div class="trial-note">✨ <b>Premium trial</b> — ${trialDaysLeft()} day${trialDaysLeft()===1?"":"s"} left, everything unlocked. <button class="linkbtn" data-pro-open>Keep Premium</button></div>`
         : isPreview()
         ? `<div class="preview-note">🔓 <b>Preview mode</b> — you're seeing Premium features. <button class="linkbtn" data-pro-open>Unlock Premium</button></div>`
@@ -1537,7 +1539,8 @@ if(REDUCED){ // draw a few static frames so motion settles, then stop
 
 /* ================= boot ================= */
 (function(){
-  firstSeen();      // start the 7-day reverse trial on first visit
+  if(DEMO){ const pb=$("#proBtn"); if(pb) pb.style.display="none"; }
+  firstSeen();      // start the 14-day reverse trial on first visit
   updateProBtn();
   const saved=loadPlace();
   applyTheme(saved||null);

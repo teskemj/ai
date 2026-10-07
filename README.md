@@ -29,6 +29,14 @@ no build, no dependencies, no API keys — plus a Capacitor wrapper for iOS/Andr
 Open `index.html` in any browser, or visit the live site. The 📍 location button needs
 HTTPS (the hosted site); city/ZIP search works anywhere.
 
+**Free vs. Premium:** new visitors get a 14-day full-access trial, then the free tier
+(weather + local sports); Premium unlocks BBQ, Golf, Field & Stream and team themes.
+
+**Paywall-free demo:** `demo.html` (e.g. `https://teskemj.github.io/ai/demo.html`) shows
+everything unlocked with no paywall UI — for demos, investors, or store review. Adding
+`?demo` to the normal URL does the same. `demo.html` is generated from `index.html` by
+`npm run sync:web`, so keep editing `index.html` only.
+
 ## Mobile apps (iOS + Android)
 The same `index.html` is wrapped with Capacitor. See **[CAPACITOR.md](CAPACITOR.md)**
 to build and run, and **[STORE_LAUNCH.md](STORE_LAUNCH.md)** for the data-licensing
