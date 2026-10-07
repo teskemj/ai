@@ -1,0 +1,554 @@
+<title>Heartland Weather Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,900&family=Libre+Franklin:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+  /* LAYOUT: single-column desk — sticky masthead, alert strip, big current-conditions hero, a verdict grid, then a 10-day almanac strip. Think weather-bureau console, not glassy app. */
+  :root{
+    --bg:#eef1f4; --panel:#ffffff; --panel-2:#f6f8fa; --ink:#18212e; --ink-soft:#50606f;
+    --line:#d7dee5; --accent:#1f6f8b; --accent-ink:#0f4a5e; --amber:#c47a1a; --amber-bg:#fbf0dc;
+    --good:#2e7d4f; --warn:#c27c16; --bad:#c23b2e; --crit:#9a2b8f; --haz:#7a1d1d;
+    --shadow:0 1px 2px rgba(20,30,45,.06),0 8px 24px rgba(20,30,45,.06);
+    --disp:"Fraunces",Georgia,"Times New Roman",serif;
+    --body:"Libre Franklin",system-ui,-apple-system,Segoe UI,sans-serif;
+    --mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
+    --line:#2a3744; --accent:#56b6cf; --accent-ink:#8fd4e6; --amber:#e6a94a; --amber-bg:#2a2214;
+    --good:#5fcf8e; --warn:#e6b14a; --bad:#ef6a5c; --crit:#d97fce; --haz:#e05a5a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35); color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
+    --line:#2a3744; --accent:#56b6cf; --accent-ink:#8fd4e6; --amber:#e6a94a; --amber-bg:#2a2214;
+    --good:#5fcf8e; --warn:#e6b14a; --bad:#ef6a5c; --crit:#d97fce; --haz:#e05a5a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35); color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+
+  /* Masthead */
+  header.mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--bg);
+    border-bottom:1px solid var(--line);padding-block:12px;margin-bottom:18px}
+  .mast-row{max-width:1040px;margin:0 auto;padding-inline:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column;line-height:1.05;margin-right:auto}
+  .brand b{font-family:var(--disp);font-weight:900;font-size:1.35rem;letter-spacing:-.01em}
+  .brand small{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+  form.search{display:flex;gap:6px;align-items:center;flex:1 1 240px;min-width:0}
+  .search input{flex:1 1 auto;min-width:0;font:inherit;font-size:.95rem;padding:9px 12px;border:1px solid var(--line);
+    border-radius:9px;background:var(--panel);color:var(--ink)}
+  .search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:9px;padding:9px 12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.icon{padding:9px 11px}
+  .suggest{position:relative;flex:1 1 240px;min-width:0}
+  .suggest .list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;box-shadow:var(--shadow);overflow:hidden;z-index:50}
+  .suggest .list button{display:block;width:100%;text-align:left;border:0;border-radius:0;border-bottom:1px solid var(--line);background:none}
+  .suggest .list button:last-child{border-bottom:0}
+  .suggest .list button:hover{background:var(--panel-2)}
+  .suggest .list small{color:var(--ink-soft);font-family:var(--mono);font-size:.7rem}
+
+  /* Alert strip */
+  .alerts{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .alert{border:1px solid;border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .alert .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .alert h3{margin:0;font-family:var(--disp);font-weight:700;font-size:1.05rem}
+  .alert .sev{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 8px;border-radius:999px;color:#fff;margin-left:auto}
+  .alert p{margin:8px 0 0;font-size:.9rem;color:var(--ink-soft)}
+  .alert.c-extreme,.alert.c-severe{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border-color:var(--bad)}
+  .alert.c-extreme .sev,.alert.c-severe .sev{background:var(--bad)}
+  .alert.c-moderate{background:var(--amber-bg);border-color:var(--amber)}
+  .alert.c-moderate .sev{background:var(--amber)}
+  .alert.c-minor{background:var(--panel-2);border-color:var(--line)}
+  .alert.c-minor .sev{background:var(--ink-soft)}
+  details.alert summary{list-style:none;cursor:pointer}
+  details.alert summary::-webkit-details-marker{display:none}
+
+  /* Hero */
+  .hero{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+    padding:22px;margin-bottom:18px}
+  .hero-grid{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+  .place{font-family:var(--disp);font-weight:600;font-size:1.25rem;letter-spacing:-.01em}
+  .place span{color:var(--ink-soft);font-weight:500}
+  .asof{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
+  .nowtemp{display:flex;align-items:flex-start;gap:4px;margin-top:6px}
+  .nowtemp b{font-family:var(--disp);font-weight:900;font-size:4.6rem;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .nowtemp .deg{font-family:var(--disp);font-weight:600;font-size:1.6rem;margin-top:4px}
+  .cond{font-size:1.05rem;font-weight:600;margin-top:2px}
+  .feels{color:var(--ink-soft);font-size:.92rem;margin-top:2px}
+  .glyph{font-size:4.2rem;line-height:1;text-align:center}
+  .nowstats{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{display:flex;flex-direction:column;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    padding:8px 12px;min-width:92px}
+  .chip .k{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .chip .v{font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums;margin-top:2px}
+  .quip{margin-top:16px;padding:14px 16px;border-left:3px solid var(--accent);background:var(--panel-2);
+    border-radius:0 10px 10px 0;font-size:.98rem}
+  .quip b{font-family:var(--disp)}
+
+  /* Verdict grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+  .card h2{margin:0 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  .verdict{font-family:var(--disp);font-weight:900;font-size:1.5rem;letter-spacing:-.01em;line-height:1.05;margin:6px 0 6px}
+  .verdict.go{color:var(--good)} .verdict.maybe{color:var(--warn)} .verdict.no{color:var(--bad)}
+  .card p{margin:6px 0 0;font-size:.92rem;color:var(--ink-soft)}
+  .wear-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:7px}
+  .wear-list li{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.84rem;font-weight:500}
+
+  /* AQI gauge */
+  .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  .aqi-num b{font-family:var(--disp);font-weight:900;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
+  .aqi-cat{font-weight:700;font-size:.95rem}
+  .gauge{height:10px;border-radius:999px;margin-top:12px;position:relative;
+    background:linear-gradient(90deg,#2e9c5a 0%,#2e9c5a 16.6%,#d8c42e 16.6%,#d8c42e 33.3%,#e08a2e 33.3%,#e08a2e 50%,#d8463a 50%,#d8463a 66.6%,#9a44c9 66.6%,#9a44c9 83.3%,#7a1d1d 83.3%,#7a1d1d 100%)}
+  .gauge .pin{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink);
+    box-shadow:0 0 0 2px var(--panel);transform:translateX(-50%)}
+
+  /* Forecast strip */
+  .section-head{display:flex;align-items:baseline;gap:10px;margin:4px 2px 12px}
+  .section-head h2{font-family:var(--disp);font-weight:900;font-size:1.4rem;letter-spacing:-.01em;margin:0}
+  .section-head small{font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(118px,1fr);gap:10px;overflow-x:auto;
+    padding-bottom:8px;scroll-snap-type:x mandatory}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 12px;text-align:center;
+    scroll-snap-align:start;box-shadow:var(--shadow)}
+  .day .dow{font-weight:700;font-size:.9rem}
+  .day .date{font-family:var(--mono);font-size:.6rem;color:var(--ink-soft);letter-spacing:.06em}
+  .day .ic{font-size:2rem;margin:7px 0 4px}
+  .day .hl{font-variant-numeric:tabular-nums;font-size:.98rem}
+  .day .hl .hi{font-weight:700} .day .hl .lo{color:var(--ink-soft)}
+  .day .mini{display:flex;flex-direction:column;gap:3px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:.72rem;color:var(--ink-soft);font-family:var(--mono)}
+  .day .mini span{display:flex;justify-content:space-between;gap:6px}
+  .day .mini b{color:var(--ink);font-weight:700}
+
+  footer{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-size:.8rem;color:var(--ink-soft)}
+  footer a{color:var(--accent)}
+  footer .src{font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;margin-top:6px}
+
+  .skeleton,.msg{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    padding:28px;text-align:center;color:var(--ink-soft)}
+  .msg b{color:var(--ink);font-family:var(--disp);display:block;font-size:1.15rem;margin-bottom:4px}
+  .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+  @media (max-width:560px){
+    .hero-grid{grid-template-columns:1fr}
+    .glyph{text-align:left;font-size:3.4rem}
+    .nowtemp b{font-size:3.8rem}
+  }
+</style>
+
+<header class="mast">
+  <div class="mast-row">
+    <div class="brand"><b>Heartland Weather Desk</b><small>NWS&nbsp;·&nbsp;NOAA models&nbsp;·&nbsp;no sugarcoating</small></div>
+    <div class="suggest">
+      <form class="search" id="searchForm" autocomplete="off">
+        <input id="q" type="text" placeholder="City, ZIP, or wherever you're stuck" aria-label="Search location">
+        <button type="submit" class="primary">Search</button>
+      </form>
+      <div id="sugg" hidden></div>
+    </div>
+    <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
+    <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="alerts" class="alerts" hidden></div>
+  <div id="content">
+    <div class="skeleton"><span class="spin"></span>&nbsp;&nbsp;Consulting the sky…</div>
+  </div>
+  <footer>
+    Official hazard alerts from the <a href="https://www.weather.gov" target="_blank" rel="noopener">U.S. National Weather Service</a>.
+    Forecast, humidity &amp; air quality via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, which runs on NOAA's GFS/HRRR guidance — the same models the NWS leans on.
+    <div class="src" id="srcLine">Not a substitute for official warnings. If a siren goes off, don't finish reading this app.</div>
+  </footer>
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const content = $("#content"), alertsEl = $("#alerts");
+
+/* ---------- persistence (per-viewer convenience) ---------- */
+function savePlace(p){ try{ localStorage.setItem("hwd.place", JSON.stringify(p)); }catch(e){} }
+function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||"null"); }catch(e){ return null; } }
+
+/* ---------- theme toggle ---------- */
+(function(){
+  let t=null; try{ t=localStorage.getItem("hwd.theme"); }catch(e){}
+  if(t) document.documentElement.setAttribute("data-theme",t);
+  $("#themeBtn").addEventListener("click",()=>{
+    const cur=document.documentElement.getAttribute("data-theme");
+    const sysDark=window.matchMedia("(prefers-color-scheme:dark)").matches;
+    const next=(cur? cur : (sysDark?"dark":"light"))==="dark" ? "light":"dark";
+    document.documentElement.setAttribute("data-theme",next);
+    try{ localStorage.setItem("hwd.theme",next); }catch(e){}
+  });
+})();
+
+/* ---------- WMO weather codes ---------- */
+const WMO={
+  0:["Clear","☀️"],1:["Mostly clear","🌤️"],2:["Partly cloudy","⛅"],3:["Overcast","☁️"],
+  45:["Fog","🌫️"],48:["Rime fog","🌫️"],
+  51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],
+  56:["Freezing drizzle","🌨️"],57:["Freezing drizzle","🌨️"],
+  61:["Light rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],
+  66:["Freezing rain","🌨️"],67:["Freezing rain","🌨️"],
+  71:["Light snow","🌨️"],73:["Snow","❄️"],75:["Heavy snow","❄️"],77:["Snow grains","🌨️"],
+  80:["Rain showers","🌦️"],81:["Rain showers","🌧️"],82:["Violent showers","⛈️"],
+  85:["Snow showers","🌨️"],86:["Heavy snow showers","❄️"],
+  95:["Thunderstorm","⛈️"],96:["Storm w/ hail","⛈️"],99:["Severe storm w/ hail","⛈️"]
+};
+const wmo = c => WMO[c] || ["Unknown","🌡️"];
+
+/* ---------- AQI categories (US EPA) ---------- */
+function aqiCat(a){
+  if(a==null) return {label:"—",color:"var(--ink-soft)",note:"No reading."};
+  if(a<=50) return {label:"Good",color:"var(--good)",note:"Air's clean. Breathe like you mean it."};
+  if(a<=100) return {label:"Moderate",color:"var(--warn)",note:"Fine for most. The dramatically sensitive may sniffle."};
+  if(a<=150) return {label:"Unhealthy for sensitive groups",color:"#e08a2e",note:"Asthma, kids, and the elderly: take it easy out there."};
+  if(a<=200) return {label:"Unhealthy",color:"var(--bad)",note:"Everyone feels this one. Cut the outdoor cardio."};
+  if(a<=300) return {label:"Very unhealthy",color:"var(--crit)",note:"Stay inside. This is not the air you want in your lungs."};
+  return {label:"Hazardous",color:"var(--haz)",note:"Genuinely dangerous. Doors shut, mask on if you must go out."};
+}
+
+/* ---------- fetch helpers ---------- */
+async function getJSON(url){
+  const r = await fetch(url, {headers:{Accept:"application/json"}});
+  if(!r.ok) throw new Error(url.split("?")[0]+" → "+r.status);
+  return r.json();
+}
+
+/* ---------- geocoding ---------- */
+async function geocode(q){
+  const u="https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name="+encodeURIComponent(q);
+  const d=await getJSON(u);
+  return (d.results||[]).map(r=>({
+    name:r.name, admin1:r.admin1, country:r.country_code, lat:r.latitude, lon:r.longitude,
+    label:[r.name, r.admin1, r.country_code].filter(Boolean).join(", ")
+  }));
+}
+
+/* ---------- live search suggestions ---------- */
+let suggTimer=null;
+$("#q").addEventListener("input",e=>{
+  const v=e.target.value.trim();
+  clearTimeout(suggTimer);
+  if(v.length<2){ $("#sugg").hidden=true; return; }
+  suggTimer=setTimeout(async()=>{
+    try{
+      const res=await geocode(v);
+      if(!res.length){ $("#sugg").hidden=true; return; }
+      const box=$("#sugg");
+      box.className="list"; box.innerHTML="";
+      box.hidden=false;
+      res.forEach(r=>{
+        const b=document.createElement("button");
+        b.type="button";
+        b.innerHTML=`${r.name} <small>${[r.admin1,r.country].filter(Boolean).join(" · ")}</small>`;
+        b.onclick=()=>{ $("#sugg").hidden=true; $("#q").value=r.label; go(r); };
+        box.appendChild(b);
+      });
+    }catch(err){ $("#sugg").hidden=true; }
+  },280);
+});
+document.addEventListener("click",e=>{ if(!e.target.closest(".suggest")) $("#sugg").hidden=true; });
+
+$("#searchForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const v=$("#q").value.trim(); if(!v) return;
+  $("#sugg").hidden=true;
+  showMsg("Finding “"+v+"”…",true);
+  try{
+    const res=await geocode(v);
+    if(!res.length){ showMsg("Never heard of “"+v+".” Check the spelling, or it's too small to make the map.",false); return; }
+    go(res[0]);
+  }catch(err){ showMsg("Search hit a wall. Try again in a sec.",false); }
+});
+
+/* ---------- geolocation ---------- */
+$("#locBtn").addEventListener("click",()=>{
+  if(!navigator.geolocation){ showMsg("Your browser won't share its location. Type a city instead.",false); return; }
+  showMsg("Triangulating your exact couch…",true);
+  navigator.geolocation.getCurrentPosition(
+    async pos=>{
+      const lat=pos.coords.latitude, lon=pos.coords.longitude;
+      let label="Your location";
+      try{
+        const d=await getJSON("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&latitude="+lat+"&longitude="+lon);
+      }catch(e){}
+      go({name:"Your location",admin1:"",country:"",lat,lon,label});
+    },
+    ()=>showMsg("Location denied. Respect. Type a city instead.",false),
+    {timeout:9000}
+  );
+});
+
+/* ---------- messaging ---------- */
+function showMsg(text,spin){
+  content.innerHTML=`<div class="msg"><b>${spin?'<span class="spin"></span>&nbsp;&nbsp;':''}${text}</b></div>`;
+}
+
+/* ---------- what to wear ---------- */
+function dressFor(feels,pop,wind,uv,code){
+  const items=[]; let lead="";
+  if(feels<0){ lead="Dress like the Arctic owes you money."; items.push("🧥 Heaviest coat","🧣 Scarf over your face","🧤 Insulated gloves","🥾 Real boots","🔥 Base layers"); }
+  else if(feels<20){ lead="Full winter kit. No heroics."; items.push("🧥 Winter coat","🧣 Scarf","🧤 Gloves","🎧 Hat","🥾 Boots"); }
+  else if(feels<35){ lead="Coat weather, and you know it."; items.push("🧥 Warm coat","🧤 Gloves","👖 Long pants","👟 Closed shoes"); }
+  else if(feels<50){ lead="The classic Midwest layer trap."; items.push("🧥 Jacket","👕 Long sleeves","👖 Pants","🧦 Socks you'll regret by noon"); }
+  else if(feels<65){ lead="Light-jacket limbo. Bring it, blame the forecast."; items.push("🧥 Light jacket","👕 Long or short sleeves","👖 Pants"); }
+  else if(feels<78){ lead="Genuinely pleasant. Dress like a functional adult."; items.push("👕 T-shirt","👖 Pants or shorts","😎 Optional smugness"); }
+  else if(feels<88){ lead="Warm. Keep it breathable."; items.push("👕 Light shirt","🩳 Shorts","🧢 Hat","💧 Water bottle"); }
+  else { lead="Dangerously hot. Dress like you're avoiding the oven you live in."; items.push("🩳 Least clothing legally advisable","🧢 Hat","🕶️ Sunglasses","💧 Water, lots","🧊 A plan to stay indoors"); }
+  if(pop>=50) items.push("☔ Umbrella (it'll invert, it always does)");
+  else if(pop>=30) items.push("🧥 Something water-resistant, just in case");
+  if(wind>=25) items.push("💨 Nothing you mind chasing down the block");
+  if(uv>=7) items.push("🧴 Sunscreen");
+  if([71,73,75,77,85,86,66,67,56,57].includes(code)) items.push("🥾 Traction — it's slick out there");
+  return {lead,items};
+}
+
+/* ---------- stay-home verdict ---------- */
+function verdict(feels,pop,wind,gust,aqi,code,alertTier){
+  const reasons=[];
+  let score=0;
+  if(alertTier>=3){ score+=5; reasons.push("the National Weather Service is shouting"); }
+  else if(alertTier>=2){ score+=2; reasons.push("there's an active advisory"); }
+  if(feels<=-10){ score+=4; reasons.push("feels-like is in frostbite territory"); }
+  else if(feels<=5){ score+=2; reasons.push("it's brutally cold"); }
+  if(feels>=100){ score+=4; reasons.push("the heat index is a health hazard"); }
+  else if(feels>=92){ score+=2; reasons.push("it's oppressively hot"); }
+  if(gust>=50||wind>=40){ score+=3; reasons.push("the wind will relocate your patio furniture"); }
+  else if(wind>=28){ score+=1; reasons.push("it's seriously windy"); }
+  if(aqi!=null&&aqi>200){ score+=4; reasons.push("the air is genuinely unsafe"); }
+  else if(aqi!=null&&aqi>150){ score+=2; reasons.push("the air quality is rough"); }
+  if([82,95,96,99].includes(code)){ score+=3; reasons.push("there's a thunderstorm in the mix"); }
+  else if([65,75,82,86].includes(code)){ score+=2; reasons.push("precipitation is coming down hard"); }
+  if(pop>=80){ score+=1; reasons.push("it's almost certainly going to rain/snow on you"); }
+
+  let cls,title,blurb;
+  if(score>=5){ cls="no"; title="Stay home."; blurb="This is a blanket-and-takeout day — "+joinR(reasons)+". Whatever it is, it can wait."; }
+  else if(score>=2){ cls="maybe"; title="Your call, chief."; blurb="Going out is survivable, but "+joinR(reasons)+". Pack accordingly and lower your expectations."; }
+  else { cls="go"; title="Go live your life."; blurb=reasons.length? "Nothing dramatic out there — just "+joinR(reasons)+". Go be a person." : "Rare, suspicious, almost-perfect conditions. Get outside before the Midwest changes its mind."; }
+  return {cls,title,blurb};
+}
+function joinR(a){ if(!a.length) return ""; if(a.length===1) return a[0]; return a.slice(0,-1).join(", ")+" and "+a[a.length-1]; }
+
+/* ---------- hero quip ---------- */
+function heroQuip(feels,temp,hum,wind,code,isDay){
+  if(feels<0) return "Feels like <b>"+Math.round(feels)+"°</b>. Your nose hairs are about to file a formal complaint. This is the cold that makes you question your life choices and your ZIP code.";
+  if(feels<20) return "A crisp <b>"+Math.round(feels)+"°</b> feels-like. Exposed skin is on a timer. Layer up like you're being deposed.";
+  if(feels>=100) return "Feels like <b>"+Math.round(feels)+"°</b> with "+hum+"% humidity — essentially a locker room that forgot to pay its AC bill. Hydrate or become beef jerky.";
+  if(feels>=90&&hum>=55) return "<b>"+Math.round(temp)+"°</b> and "+hum+"% humidity. The air is less 'weather' and more 'warm soup you have to walk through.' Shower, go outside, repeat.";
+  if(code>=95) return "Thunderstorms on deck. Nature's light show, admission free, seating indoors recommended.";
+  if([71,73,75,77,85,86].includes(code)) return "Snow's falling. Somewhere, four inches is being called 'a dusting' by someone insufferable. Drive like everyone around you forgot how.";
+  if(wind>=28) return "Wind's gusting hard enough to make your hair an independent variable. Hold onto small children and large hats.";
+  if(feels>=68&&feels<=80&&code<=2&&isDay) return "Genuinely, offensively pleasant — <b>"+Math.round(temp)+"°</b> and clear. Deeply suspicious for around here. Go outside before it's rescinded.";
+  if(code>=45&&code<=48) return "Fog's rolled in. Visibility: moody. Perfect weather for pretending you're in a prestige drama.";
+  return "<b>"+Math.round(temp)+"°</b>, "+wmo(code)[0].toLowerCase()+". Not dramatic enough for a story, not boring enough to ignore. Classic.";
+}
+
+/* ---------- NWS alerts ---------- */
+async function getAlerts(lat,lon){
+  try{
+    const d=await getJSON("https://api.weather.gov/alerts/active?status=actual&point="+lat.toFixed(4)+","+lon.toFixed(4));
+    return (d.features||[]).map(f=>f.properties).filter(p=>p&&p.event);
+  }catch(e){ return []; } // alerts are best-effort; NWS is US-only
+}
+function sevClass(sev){
+  const s=(sev||"").toLowerCase();
+  if(s==="extreme") return "c-extreme";
+  if(s==="severe") return "c-severe";
+  if(s==="moderate") return "c-moderate";
+  return "c-minor";
+}
+function sevTier(alerts){
+  let t=0;
+  alerts.forEach(a=>{
+    const s=(a.severity||"").toLowerCase();
+    if(s==="extreme") t=Math.max(t,4);
+    else if(s==="severe") t=Math.max(t,3);
+    else if(s==="moderate") t=Math.max(t,2);
+    else t=Math.max(t,1);
+  });
+  return t;
+}
+
+/* ---------- main ---------- */
+async function go(place){
+  savePlace(place);
+  $("#q").value="";
+  showMsg('<span class="spin"></span>&nbsp;&nbsp;Reading the clouds over '+(place.name||"there")+"…",true);
+  alertsEl.hidden=true; alertsEl.innerHTML="";
+  const {lat,lon}=place;
+  const fUrl="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_gusts_10m"+
+    "&hourly=relative_humidity_2m,temperature_2m,precipitation_probability"+
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max"+
+    "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=10";
+  const aUrl="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon+
+    "&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto";
+  try{
+    const [fc, air, alerts] = await Promise.all([
+      getJSON(fUrl),
+      getJSON(aUrl).catch(()=>null),
+      getAlerts(lat,lon)
+    ]);
+    render(place, fc, air, alerts);
+  }catch(err){
+    showMsg("The forecast servers ghosted us. "+(err.message||"")+" — try again or pick another spot.",false);
+  }
+}
+
+function dailyHumidity(fc){
+  // average hourly RH per calendar day
+  const times=fc.hourly.time, rh=fc.hourly.relative_humidity_2m, out={};
+  for(let i=0;i<times.length;i++){
+    const day=times[i].slice(0,10);
+    (out[day]=out[day]||[]).push(rh[i]);
+  }
+  const avg={};
+  for(const d in out){ avg[d]=Math.round(out[d].reduce((a,b)=>a+b,0)/out[d].length); }
+  return avg;
+}
+
+function render(place, fc, air, alerts){
+  const cur=fc.current, d=fc.daily;
+  const temp=cur.temperature_2m, feels=cur.apparent_temperature, hum=cur.relative_humidity_2m;
+  const wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code, isDay=cur.is_day===1;
+  const aqi = air && air.current ? air.current.us_aqi : null;
+  const pop0 = d.precipitation_probability_max ? d.precipitation_probability_max[0] : 0;
+  const uv0 = d.uv_index_max ? d.uv_index_max[0] : 0;
+  const tier = sevTier(alerts);
+  const [condLabel,glyph]=wmo(code);
+
+  /* alerts strip */
+  if(alerts.length){
+    alertsEl.hidden=false;
+    alertsEl.innerHTML=alerts.slice(0,4).map(a=>{
+      const cls=sevClass(a.severity);
+      const head=a.headline||a.event;
+      const body=(a.description||"").trim().replace(/\n{2,}/g,"\n").slice(0,600);
+      return `<details class="alert ${cls}" ${a.severity&&a.severity.toLowerCase()==="extreme"?"open":""}>
+        <summary class="top"><h3>⚠️ ${esc(a.event)}</h3><span class="sev">${esc(a.severity||"alert")}</span></summary>
+        <p>${esc(head)}</p>${body?`<p style="white-space:pre-wrap">${esc(body)}${a.description&&a.description.length>600?"…":""}</p>`:""}</details>`;
+    }).join("");
+  }
+
+  const vq=verdict(feels,pop0,wind,gust,aqi,code,tier);
+  const wear=dressFor(feels,pop0,wind,uv0,code);
+  const cat=aqiCat(aqi);
+  const aqiPct = aqi==null?0:Math.max(2,Math.min(100,(aqi/400)*100));
+  const dayHum=dailyHumidity(fc);
+  const now=new Date();
+  const placeLabel = place.admin1 ? `${place.name}, <span>${place.admin1}</span>` : (place.name||"Your location");
+
+  content.innerHTML=`
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="glyph" aria-hidden="true">${glyph}</div>
+        <div>
+          <div class="place">${placeLabel}</div>
+          <div class="asof">As of ${now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})} · ${now.toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"})}</div>
+          <div class="nowtemp"><b>${Math.round(temp)}</b><span class="deg">°F</span></div>
+          <div class="cond">${esc(condLabel)}</div>
+          <div class="feels">Feels like ${Math.round(feels)}°</div>
+        </div>
+      </div>
+      <div class="nowstats">
+        ${chip("Humidity",hum+"%")}
+        ${chip("Wind",Math.round(wind)+" mph")}
+        ${chip("Gusts",Math.round(gust)+" mph")}
+        ${chip("Rain today",Math.round(pop0)+"%")}
+        ${chip("UV index",Math.round(uv0))}
+        ${chip("Air (AQI)", aqi==null?"—":Math.round(aqi))}
+      </div>
+      <div class="quip"><b>The read:</b> ${heroQuip(feels,temp,hum,wind,code,isDay)}</div>
+    </section>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Should you stay home?</h2>
+        <div class="verdict ${vq.cls}">${vq.title}</div>
+        <p>${vq.blurb}</p>
+      </div>
+
+      <div class="card">
+        <h2>What to wear</h2>
+        <div class="verdict" style="font-size:1.15rem;color:var(--ink)">${wear.lead}</div>
+        <ul class="wear-list">${wear.items.map(i=>`<li>${i}</li>`).join("")}</ul>
+      </div>
+
+      <div class="card">
+        <h2>Air quality · US AQI</h2>
+        <div class="aqi-num"><b style="color:${cat.color}">${aqi==null?"—":Math.round(aqi)}</b><span class="aqi-cat" style="color:${cat.color}">${cat.label}</span></div>
+        <div class="gauge"><div class="pin" style="left:${aqiPct}%"></div></div>
+        <p>${cat.note}${air&&air.current&&air.current.pm2_5!=null?` <span style="font-family:var(--mono);font-size:.78rem">PM2.5 ${Math.round(air.current.pm2_5)} µg/m³</span>`:""}</p>
+      </div>
+
+      <div class="card">
+        <h2>Humidity &amp; comfort</h2>
+        <div class="verdict" style="font-size:1.6rem;color:var(--ink)">${hum}%</div>
+        <p>${humidityNote(hum,temp)}</p>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>The 10-Day</h2><small>what NOAA's models expect</small></div>
+    <div class="strip">
+      ${d.time.map((iso,i)=>dayCard(iso,i,d,dayHum)).join("")}
+    </div>
+  `;
+  $("#srcLine").textContent="Pulled "+now.toLocaleString()+". Not a substitute for official warnings — if a siren goes off, don't finish reading this app.";
+}
+
+function chip(k,v){ return `<div class="chip"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+
+function humidityNote(h,t){
+  if(h>=80) return "Soup. The air is basically wet. Your hair has opinions and they're all frizzy.";
+  if(h>=65) return t>=78?"Sticky and warm — the kind of muggy that makes a cold shower feel like a personality.":"On the humid side. Clammy, not catastrophic.";
+  if(h>=40) return "Comfortable, actually. Enjoy this rare meteorological mercy.";
+  if(h>=25) return "Dry. Moisturizer and a water glass wouldn't hurt.";
+  return "Desert-dry. Static shocks incoming — stop touching doorknobs like a rookie.";
+}
+
+function dayCard(iso,i,d,dayHum){
+  const dt=new Date(iso+"T12:00:00");
+  const dow = i===0 ? "Today" : dt.toLocaleDateString([], {weekday:"short"});
+  const date = dt.toLocaleDateString([], {month:"numeric",day:"numeric"});
+  const [,ic]=wmo(d.weather_code[i]);
+  const hi=Math.round(d.temperature_2m_max[i]), lo=Math.round(d.temperature_2m_min[i]);
+  const pop=Math.round(d.precipitation_probability_max?d.precipitation_probability_max[i]:0);
+  const wind=Math.round(d.wind_speed_10m_max?d.wind_speed_10m_max[i]:0);
+  const hum=dayHum[iso]!=null?dayHum[iso]+"%":"—";
+  return `<div class="day">
+    <div class="dow">${dow}</div><div class="date">${date}</div>
+    <div class="ic" aria-hidden="true">${ic}</div>
+    <div class="hl"><span class="hi">${hi}°</span> <span class="lo">${lo}°</span></div>
+    <div class="mini">
+      <span>Rain <b>${pop}%</b></span>
+      <span>Wind <b>${wind}</b></span>
+      <span>Humid <b>${hum}</b></span>
+    </div>
+  </div>`;
+}
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- boot ---------- */
+(function(){
+  const saved=loadPlace();
+  go(saved || {name:"Chicago",admin1:"Illinois",country:"US",lat:41.8781,lon:-87.6298,label:"Chicago, Illinois, US"});
+})();
+</script>
