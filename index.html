@@ -52,6 +52,7 @@
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   button.icon{padding:9px 11px}
+  button.icon.off{opacity:.4}
   .suggest{position:relative;flex:1 1 240px;min-width:0}
   .suggest .list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--line);
     border-radius:10px;box-shadow:var(--shadow);overflow:hidden;z-index:50}
@@ -143,6 +144,8 @@
   .game .gbadge{margin-left:auto;flex:0 0 auto;background:var(--accent);color:#fff;font-family:var(--mono);
     font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
   .game.today .gteam{color:var(--accent)}
+  .game .lgtag{font-family:var(--mono);font-size:.5rem;letter-spacing:.06em;color:var(--ink-soft);
+    border:1px solid var(--line);border-radius:4px;padding:1px 4px;vertical-align:middle}
   .season-tag{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
     color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 8px;margin-left:auto}
 
@@ -218,6 +221,7 @@
       </form>
       <div id="sugg" hidden></div>
     </div>
+    <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
     <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
     <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
   </div>
@@ -256,6 +260,19 @@ function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||
     const next=(cur? cur : (sysDark?"dark":"light"))==="dark" ? "light":"dark";
     document.documentElement.setAttribute("data-theme",next);
     try{ localStorage.setItem("hwd.theme",next); }catch(e){}
+  });
+})();
+
+/* ================= sports on/off toggle ================= */
+(function(){
+  const btn=$("#sportsBtn");
+  function sync(){ btn.classList.toggle("off", !sportsEnabled()); btn.title=(sportsEnabled()?"Hide":"Show")+" sports"; }
+  sync();
+  btn.addEventListener("click",()=>{
+    const on=!sportsEnabled();
+    try{ localStorage.setItem("hwd.sports", on?"on":"off"); }catch(e){}
+    sync();
+    if(_lastPlace) go(_lastPlace);
   });
 })();
 
@@ -456,56 +473,121 @@ function seasonInfo(){
   return {football,baseball,golf,primary,label:primary==="football"?"football season":"baseball season"};
 }
 
-/* ================= team schedules (Packers / Brewers, live from ESPN) ================= */
-const TEAMS=[
-  {key:"football",label:"Packers",emoji:"🏈",abbr:"GB", url:"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/gb/schedule"},
-  {key:"baseball",label:"Brewers",emoji:"⚾",abbr:"MIL",url:"https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/mil/schedule"}
+/* ================= team schedules (location-aware, live from ESPN) ================= */
+const LG={
+  nfl:{emoji:"🏈",tag:"NFL"}, mlb:{emoji:"⚾",tag:"MLB"},
+  nba:{emoji:"🏀",tag:"NBA"}, ncaaf:{emoji:"🎓",tag:"CFB"}
+};
+const TEAM_DB={
+  packers:{label:"Packers",lg:"nfl",path:"football/nfl/teams/gb"},
+  vikings:{label:"Vikings",lg:"nfl",path:"football/nfl/teams/min"},
+  bears:{label:"Bears",lg:"nfl",path:"football/nfl/teams/chi"},
+  lions:{label:"Lions",lg:"nfl",path:"football/nfl/teams/det"},
+  browns:{label:"Browns",lg:"nfl",path:"football/nfl/teams/cle"},
+  bengals:{label:"Bengals",lg:"nfl",path:"football/nfl/teams/cin"},
+  colts:{label:"Colts",lg:"nfl",path:"football/nfl/teams/ind"},
+  chiefs:{label:"Chiefs",lg:"nfl",path:"football/nfl/teams/kc"},
+  brewers:{label:"Brewers",lg:"mlb",path:"baseball/mlb/teams/mil"},
+  cubs:{label:"Cubs",lg:"mlb",path:"baseball/mlb/teams/chc"},
+  whitesox:{label:"White Sox",lg:"mlb",path:"baseball/mlb/teams/chw"},
+  twins:{label:"Twins",lg:"mlb",path:"baseball/mlb/teams/min"},
+  tigers:{label:"Tigers",lg:"mlb",path:"baseball/mlb/teams/det"},
+  guardians:{label:"Guardians",lg:"mlb",path:"baseball/mlb/teams/cle"},
+  reds:{label:"Reds",lg:"mlb",path:"baseball/mlb/teams/cin"},
+  cardinals:{label:"Cardinals",lg:"mlb",path:"baseball/mlb/teams/stl"},
+  royals:{label:"Royals",lg:"mlb",path:"baseball/mlb/teams/kc"},
+  bucks:{label:"Bucks",lg:"nba",path:"basketball/nba/teams/mil"},
+  bulls:{label:"Bulls",lg:"nba",path:"basketball/nba/teams/chi"},
+  wolves:{label:"Timberwolves",lg:"nba",path:"basketball/nba/teams/min"},
+  pistons:{label:"Pistons",lg:"nba",path:"basketball/nba/teams/det"},
+  cavaliers:{label:"Cavaliers",lg:"nba",path:"basketball/nba/teams/cle"},
+  pacers:{label:"Pacers",lg:"nba",path:"basketball/nba/teams/ind"},
+  badgers:{label:"Badgers",lg:"ncaaf",path:"football/college-football/teams/275"},
+  gophers:{label:"Gophers",lg:"ncaaf",path:"football/college-football/teams/135"},
+  illini:{label:"Illini",lg:"ncaaf",path:"football/college-football/teams/356"},
+  buckeyes:{label:"Buckeyes",lg:"ncaaf",path:"football/college-football/teams/194"},
+  wolverines:{label:"Wolverines",lg:"ncaaf",path:"football/college-football/teams/130"},
+  hawkeyes:{label:"Hawkeyes",lg:"ncaaf",path:"football/college-football/teams/2294"},
+  huskers:{label:"Cornhuskers",lg:"ncaaf",path:"football/college-football/teams/158"}
+};
+// Teams follow the location you're viewing: nearest metro within ~170 miles.
+const METROS=[
+  {name:"Green Bay & Milwaukee",lat:44.2,lon:-88.2,teams:["packers","brewers","bucks","badgers"]},
+  {name:"Madison",lat:43.07,lon:-89.40,teams:["badgers","packers","brewers","bucks"]},
+  {name:"Twin Cities",lat:44.97,lon:-93.26,teams:["vikings","twins","wolves","gophers"]},
+  {name:"Chicago",lat:41.88,lon:-87.63,teams:["bears","cubs","whitesox","bulls"]},
+  {name:"Detroit",lat:42.33,lon:-83.05,teams:["lions","tigers","pistons","wolverines"]},
+  {name:"Cleveland",lat:41.50,lon:-81.69,teams:["browns","guardians","cavaliers","buckeyes"]},
+  {name:"Columbus",lat:39.96,lon:-82.99,teams:["buckeyes","bengals","cavaliers"]},
+  {name:"Cincinnati",lat:39.10,lon:-84.51,teams:["bengals","reds","buckeyes"]},
+  {name:"Indianapolis",lat:39.77,lon:-86.16,teams:["colts","pacers","reds"]},
+  {name:"St. Louis",lat:38.63,lon:-90.20,teams:["cardinals","illini"]},
+  {name:"Kansas City",lat:39.10,lon:-94.58,teams:["chiefs","royals"]},
+  {name:"Des Moines",lat:41.60,lon:-93.60,teams:["hawkeyes","cubs"]},
+  {name:"Omaha & Lincoln",lat:41.00,lon:-96.10,teams:["huskers","chiefs"]}
 ];
-let _schedCache=null;
+function miBetween(a,b,c,d){ const R=3958.8,t=x=>x*Math.PI/180;
+  const s=Math.sin(t(c-a)/2)**2+Math.cos(t(a))*Math.cos(t(c))*Math.sin(t(d-b)/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s)); }
+function teamsFor(place){
+  let best=null,bd=1e9;
+  for(const m of METROS){ const dd=miBetween(place.lat,place.lon,m.lat,m.lon); if(dd<bd){bd=dd;best=m;} }
+  return bd<=170 ? {metro:best.name, keys:best.teams} : {metro:null, keys:[]};
+}
+
+const _schedCache={};
 function withTimeout(p,ms){ return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]); }
-function getSchedules(){
-  if(_schedCache) return _schedCache;
-  _schedCache=Promise.all(TEAMS.map(async t=>{
+function fetchTeam(key){
+  if(_schedCache[key]) return _schedCache[key];
+  const t=TEAM_DB[key];
+  if(!t){ return Promise.resolve({key,label:key,lg:"nfl",emoji:"🏟️",tag:"",games:null}); }
+  const meta={key,label:t.label,lg:t.lg,emoji:LG[t.lg].emoji,tag:LG[t.lg].tag};
+  const url="https://site.api.espn.com/apis/site/v2/sports/"+t.path+"/schedule";
+  _schedCache[key]=(async()=>{
     try{
-      const d=await withTimeout(getJSON(t.url),6500);
-      const abbr=(d.team&&d.team.abbreviation)||t.abbr;
+      const d=await withTimeout(getJSON(url),6500);
+      const abbr=(d.team&&d.team.abbreviation)||"";
       const games=(d.events||[]).map(ev=>{
         const c=(ev.competitions&&ev.competitions[0])||{}, comp=c.competitors||[];
-        const me=comp.find(x=>x.team&&x.team.abbreviation===abbr)||{};
+        let me=comp.find(x=>x.team&&abbr&&x.team.abbreviation===abbr);
+        if(!me) me=comp.find(x=>x.team&&(x.team.displayName||"").includes(t.label))||{};
         const opp=comp.find(x=>x!==me)||{};
         const st=(c.status&&c.status.type)||{};
         return { date:new Date(ev.date), home:me.homeAway==="home",
           opp:(opp.team&&(opp.team.shortDisplayName||opp.team.displayName||opp.team.abbreviation))||"TBD",
           done:!!st.completed, state:st.state||"pre" };
       }).filter(g=>!isNaN(+g.date)).sort((a,b)=>a.date-b.date);
-      return {...t, games};
-    }catch(e){ return {...t, games:null}; }
-  }));
-  return _schedCache;
+      return {...meta, games};
+    }catch(e){ return {...meta, games:null}; }
+  })();
+  return _schedCache[key];
 }
+function getSchedules(keys){ return Promise.all(keys.map(fetchTeam)); }
 function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
 function teamStatus(team){
-  if(!team.games) return {err:true};
+  if(!team||!team.games) return {err:true};
   const now=new Date();
   const today=team.games.find(g=>sameDay(g.date,now)&&g.state!=="post") || team.games.find(g=>g.state==="in");
   const next=team.games.find(g=>!g.done && g.date>=new Date(now.getTime()-3*3600*1000));
   return {today, next};
 }
-function gameWatchCard(sched,tstat){
+function gameWatchCard(sched,tstat,metroName){
+  if(!sched.length) return `<div class="card"><h2>Game watch</h2><p>No teams mapped near here. Search a Midwest city or ZIP to follow its teams, or tap ⚾ in the header to hide sports.</p></div>`;
   const rows=sched.map(t=>{
-    const s=tstat[t.key];
-    if(s.err){ return `<div class="game"><span class="gteam">${t.emoji} ${t.label}</span><div class="gmeta"><span>schedule unavailable</span></div></div>`; }
+    const s=tstat[t.key]||{err:true};
+    const name=`${t.emoji} ${esc(t.label)} <span class="lgtag">${t.tag}</span>`;
+    if(s.err){ return `<div class="game"><span class="gteam">${name}</span><div class="gmeta"><span>schedule unavailable</span></div></div>`; }
     const g=s.today||s.next;
-    if(!g){ return `<div class="game"><span class="gteam">${t.emoji} ${t.label}</span><div class="gmeta"><span>offseason — see you next year</span></div></div>`; }
+    if(!g){ return `<div class="game"><span class="gteam">${name}</span><div class="gmeta"><span>offseason</span></div></div>`; }
     const today=!!s.today, live=g.state==="in";
     const vs=(g.home?"vs ":"@ ")+esc(g.opp);
     const time=g.date.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
     const when=live?"Live now":(today?("Today · "+time):(g.date.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+" · "+time));
-    return `<div class="game ${today?'today':''}"><span class="gteam">${t.emoji} ${esc(t.label)}</span>
+    return `<div class="game ${today?'today':''}"><span class="gteam">${name}</span>
       <div class="gmeta"><b>${vs}</b><span>${when}</span></div>${today?`<span class="gbadge">${live?'Live':'Game day'}</span>`:''}</div>`;
   }).join("");
-  return `<div class="card"><h2>Game watch</h2><div class="games">${rows}</div>
-    <p class="disclaim">Packers &amp; Brewers, pulled live from ESPN.</p></div>`;
+  return `<div class="card"><h2>Game watch${metroName?` · ${esc(metroName)}`:""}</h2><div class="games">${rows}</div>
+    <p class="disclaim">Live from ESPN · teams follow the location you're viewing.</p></div>`;
 }
 
 /* ================= stay-home verdict ================= */
@@ -603,8 +685,11 @@ function renderHoliday(h){
 }
 
 /* ================= main fetch/render ================= */
+let _lastPlace=null;
+function sportsEnabled(){ try{ return localStorage.getItem("hwd.sports")!=="off"; }catch(e){ return true; } }
+
 async function go(place){
-  savePlace(place); $("#q").value="";
+  savePlace(place); _lastPlace=place; $("#q").value="";
   showMsg('<span class="spin"></span>&nbsp;&nbsp;Reading the clouds over '+esc(place.name||"there")+"…",true);
   alertsEl.hidden=true; alertsEl.innerHTML="";
   const {lat,lon}=place;
@@ -616,8 +701,10 @@ async function go(place){
   const aUrl="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon+
     "&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto";
   try{
-    const [fc, air, alerts, schedules] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), getSchedules() ]);
-    render(place, fc, air, alerts, schedules);
+    const tm = teamsFor(place);
+    const schedP = (sportsEnabled() && tm.keys.length) ? getSchedules(tm.keys) : Promise.resolve([]);
+    const [fc, air, alerts, schedules] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), schedP ]);
+    render(place, fc, air, alerts, {list:schedules, metro:tm.metro});
   }catch(err){ showMsg("The forecast servers ghosted us. "+esc(err.message||"")+" — try again or pick another spot.",false); }
 }
 
@@ -645,7 +732,7 @@ function hourlyCards(fc){
   return out;
 }
 
-function render(place, fc, air, alerts, schedules){
+function render(place, fc, air, alerts, sports){
   const cur=fc.current, d=fc.daily;
   const temp=cur.temperature_2m, feels=cur.apparent_temperature, hum=cur.relative_humidity_2m;
   const wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code, isDay=cur.is_day===1;
@@ -679,10 +766,17 @@ function render(place, fc, air, alerts, schedules){
   const now=new Date();
 
   // seasonal smarts + team schedules
+  const SPORTS=sportsEnabled();
   const sea=seasonInfo();
-  const sched = schedules||[];
+  const sched = (sports&&sports.list)||[];
+  const metroName = sports&&sports.metro;
   const tstat={}; sched.forEach(t=>{ tstat[t.key]=teamStatus(t); });
-  const gameTodaySport = (sched.find(t=>tstat[t.key] && tstat[t.key].today)||{}).key || null;
+  const todayLeagues=new Set(sched.filter(t=>tstat[t.key]&&tstat[t.key].today).map(t=>t.lg));
+  const footballToday=todayLeagues.has("nfl")||todayLeagues.has("ncaaf");
+  const baseballToday=todayLeagues.has("mlb");
+  const basketballToday=todayLeagues.has("nba");
+  const gameTodaySport = footballToday?"football":(baseballToday?"baseball":null);
+
   let lines=sportsLines(feels,temp,wind,gust,pop0,code);
   lines.forEach(l=>{
     if(l.key==="baseball" && !sea.baseball){ l.text="Offseason. The only things flying are free-agent rumors and the grounds crew's day off."; l.lean="Offseason"; l.cls="push"; }
@@ -690,14 +784,14 @@ function render(place, fc, air, alerts, schedules){
     if(l.key==="golf" && !sea.golf){ l.text="Course would be frozen or underwater. This is a simulator-and-a-beer situation."; l.lean="Closed"; l.cls="push"; }
     if(gameTodaySport && l.key===gameTodaySport){ l.text="🚨 Game day. "+l.text; }
   });
+  if(basketballToday){ const bt=sched.find(t=>t.lg==="nba"&&tstat[t.key]&&tstat[t.key].today);
+    lines.push({icon:"🏀",sport:"Hoops",key:"hoops",lean:"Indoors",cls:"push",
+      text:"🚨 "+(bt?bt.label:"The local five")+" tonight — indoors, climate-controlled, gloriously weatherproof. No excuses."}); }
   const otherTeam = sea.primary==="football"?"baseball":"football";
-  const pri={}; let pp=0;
-  if(gameTodaySport) pri[gameTodaySport]=pp++;
-  if(pri[sea.primary]==null) pri[sea.primary]=pp++;
-  if(pri[otherTeam]==null) pri[otherTeam]=pp++;
-  if(pri.golf==null) pri.golf=pp++;
-  if(pri.tailgate==null) pri.tailgate=pp++;
-  lines.sort((a,b)=>(pri[a.key]??99)-(pri[b.key]??99));
+  const ord=[]; const seenK=new Set();
+  [gameTodaySport, basketballToday?"hoops":null, sea.primary, otherTeam, "golf","tailgate","hoops"].forEach(k=>{ if(k&&!seenK.has(k)){ seenK.add(k); ord.push(k); } });
+  const rankK=k=>{ const i=ord.indexOf(k); return i<0?99:i; };
+  lines.sort((a,b)=>rankK(a.key)-rankK(b.key));
 
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
@@ -732,9 +826,10 @@ function render(place, fc, air, alerts, schedules){
         <p>${humidityNote(hum,temp)}</p></div>
     </div>
 
+    ${SPORTS?`
     <div class="section-head"><h2>The Ballpark Report</h2><small>weather vs. the game</small><span class="season-tag">${sea.label}</span></div>
     <div class="grid">
-      ${gameWatchCard(schedules||[], tstat)}
+      ${gameWatchCard(sched, tstat, metroName)}
       <div class="card"><h2>The weather line</h2>
         <div class="lines">${lines.map(l=>
           `<div class="line"><span class="lg" aria-hidden="true">${l.icon}</span><div class="lx"><b>${l.sport}.</b> ${l.text}</div><span class="lean ${l.cls}">${l.lean}</span></div>`).join("")}</div>
@@ -745,7 +840,7 @@ function render(place, fc, air, alerts, schedules){
             <ul class="wear-list">${bp.items.map(i=>`<li>${i}</li>`).join("")}</ul>
             ${bp.note?`<p>${bp.note}</p>`:""}`;})()}
       </div>
-    </div>
+    </div>`:""}
 
     <div class="section-head"><h2>Today, Hour by Hour</h2><small>next 24 hours</small></div>
     <div class="hours">${hourlyCards(fc)}</div>
