@@ -1,7 +1,7 @@
 <title>Heartland Weather Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,900&family=Libre+Franklin:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
 <style>
   /* LAYOUT: a live scenic sky fills the screen; the current-conditions hero floats over it as glass, with solid panels below for the verdicts, an hour-by-hour strip, and the 10-day almanac. */
   :root{
@@ -10,9 +10,9 @@
     --good:#2e7d4f; --warn:#c27c16; --bad:#c23b2e; --crit:#9a2b8f; --haz:#7a1d1d;
     --glass:rgba(255,255,255,.82); --glass-brd:rgba(255,255,255,.65);
     --shadow:0 1px 2px rgba(20,30,45,.08),0 10px 30px rgba(20,30,45,.14);
-    --disp:"Fraunces",Georgia,"Times New Roman",serif;
-    --body:"Libre Franklin",system-ui,-apple-system,Segoe UI,sans-serif;
-    --mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
     --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
@@ -40,7 +40,7 @@
     border-bottom:1px solid var(--glass-brd);padding-block:12px;margin-bottom:18px}
   .mast-row{max-width:1040px;margin:0 auto;padding-inline:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .brand{display:flex;flex-direction:column;line-height:1.05;margin-right:auto}
-  .brand b{font-family:var(--disp);font-weight:900;font-size:1.35rem;letter-spacing:-.01em}
+  .brand b{font-family:var(--disp);font-weight:700;font-size:1.35rem;letter-spacing:-.01em}
   .brand small{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
   form.search{display:flex;gap:6px;align-items:center;flex:1 1 240px;min-width:0}
   .search input{flex:1 1 auto;min-width:0;font:inherit;font-size:.95rem;padding:9px 12px;border:1px solid var(--line);
@@ -97,7 +97,7 @@
   .place span{color:var(--ink-soft);font-weight:500}
   .asof{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
   .nowtemp{display:flex;align-items:flex-start;gap:4px;margin-top:6px}
-  .nowtemp b{font-family:var(--disp);font-weight:900;font-size:4.6rem;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .nowtemp b{font-family:var(--disp);font-weight:700;font-size:4.6rem;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
   .nowtemp .deg{font-family:var(--disp);font-weight:600;font-size:1.6rem;margin-top:4px}
   .cond{font-size:1.05rem;font-weight:600;margin-top:2px}
   .feels{color:var(--ink-soft);font-size:.92rem;margin-top:2px}
@@ -115,7 +115,7 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px;margin-bottom:18px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
   .card h2{margin:0 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
-  .verdict{font-family:var(--disp);font-weight:900;font-size:1.5rem;letter-spacing:-.01em;line-height:1.05;margin:6px 0 6px}
+  .verdict{font-family:var(--disp);font-weight:700;font-size:1.5rem;letter-spacing:-.01em;line-height:1.05;margin:6px 0 6px}
   .verdict.go{color:var(--good)} .verdict.maybe{color:var(--warn)} .verdict.no{color:var(--bad)}
   .card p{margin:6px 0 0;font-size:.92rem;color:var(--ink-soft)}
   .wear-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:7px}
@@ -133,9 +133,22 @@
   .lean.no{background:var(--bad)} .lean.push{background:var(--ink-soft)}
   .disclaim{font-size:.74rem;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink-soft)}
 
+  /* Game watch */
+  .games{display:flex;flex-direction:column;gap:13px;margin-top:6px}
+  .game{display:flex;align-items:center;gap:10px}
+  .game .gteam{font-weight:600;font-size:.9rem;flex:0 0 auto}
+  .game .gmeta{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+  .game .gmeta b{font-size:.95rem;font-variant-numeric:tabular-nums}
+  .game .gmeta span{font-family:var(--mono);font-size:.64rem;color:var(--ink-soft);letter-spacing:.04em}
+  .game .gbadge{margin-left:auto;flex:0 0 auto;background:var(--accent);color:#fff;font-family:var(--mono);
+    font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+  .game.today .gteam{color:var(--accent)}
+  .season-tag{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 8px;margin-left:auto}
+
   /* AQI gauge */
   .aqi-num{display:flex;align-items:baseline;gap:8px;margin-top:4px}
-  .aqi-num b{font-family:var(--disp);font-weight:900;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
+  .aqi-num b{font-family:var(--disp);font-weight:700;font-size:2.5rem;font-variant-numeric:tabular-nums;line-height:1}
   .aqi-cat{font-weight:700;font-size:.95rem}
   .gauge{height:10px;border-radius:999px;margin-top:12px;position:relative;
     background:linear-gradient(90deg,#2e9c5a 0%,#2e9c5a 16.6%,#d8c42e 16.6%,#d8c42e 33.3%,#e08a2e 33.3%,#e08a2e 50%,#d8463a 50%,#d8463a 66.6%,#9a44c9 66.6%,#9a44c9 83.3%,#7a1d1d 83.3%,#7a1d1d 100%)}
@@ -144,7 +157,7 @@
 
   /* Section strips */
   .section-head{display:flex;align-items:baseline;gap:10px;margin:4px 2px 12px}
-  .section-head h2{font-family:var(--disp);font-weight:900;font-size:1.4rem;letter-spacing:-.01em;margin:0;
+  .section-head h2{font-family:var(--disp);font-weight:700;font-size:1.4rem;letter-spacing:-.01em;margin:0;
     text-shadow:0 1px 10px rgba(0,0,0,.18)}
   .section-head small{font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
 
@@ -432,7 +445,67 @@ function sportsLines(feels,temp,wind,gust,pop,code){
   else if(cold) L.push({icon:"🍺",sport:"Tailgate",text:"Crisp lot, cold hands, hot brats. This is the good stuff, actually.",lean:"7/10",cls:"over"});
   else if(hot) L.push({icon:"🍺",sport:"Tailgate",text:"Parking-lot sauna. Keep the cooler full and the cornhole in the shade.",lean:"6/10",cls:"push"});
   else L.push({icon:"🍺",sport:"Tailgate",text:"Chef's-kiss tailgate weather. Clear skies, cold cans. Call in sick tomorrow.",lean:"10/10",cls:"over"});
-  return L;
+  return L.map(l=>({...l, key:l.sport.toLowerCase()}));
+}
+
+/* ================= seasonal smarts ================= */
+function seasonInfo(){
+  const m=new Date().getMonth(); // 0=Jan
+  const football=(m>=8||m<=1), baseball=(m>=2&&m<=9), golf=(m>=3&&m<=9);
+  const primary= football ? "football" : (baseball ? "baseball" : "football");
+  return {football,baseball,golf,primary,label:primary==="football"?"football season":"baseball season"};
+}
+
+/* ================= team schedules (Packers / Brewers, live from ESPN) ================= */
+const TEAMS=[
+  {key:"football",label:"Packers",emoji:"🏈",abbr:"GB", url:"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/gb/schedule"},
+  {key:"baseball",label:"Brewers",emoji:"⚾",abbr:"MIL",url:"https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/mil/schedule"}
+];
+let _schedCache=null;
+function withTimeout(p,ms){ return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]); }
+function getSchedules(){
+  if(_schedCache) return _schedCache;
+  _schedCache=Promise.all(TEAMS.map(async t=>{
+    try{
+      const d=await withTimeout(getJSON(t.url),6500);
+      const abbr=(d.team&&d.team.abbreviation)||t.abbr;
+      const games=(d.events||[]).map(ev=>{
+        const c=(ev.competitions&&ev.competitions[0])||{}, comp=c.competitors||[];
+        const me=comp.find(x=>x.team&&x.team.abbreviation===abbr)||{};
+        const opp=comp.find(x=>x!==me)||{};
+        const st=(c.status&&c.status.type)||{};
+        return { date:new Date(ev.date), home:me.homeAway==="home",
+          opp:(opp.team&&(opp.team.shortDisplayName||opp.team.displayName||opp.team.abbreviation))||"TBD",
+          done:!!st.completed, state:st.state||"pre" };
+      }).filter(g=>!isNaN(+g.date)).sort((a,b)=>a.date-b.date);
+      return {...t, games};
+    }catch(e){ return {...t, games:null}; }
+  }));
+  return _schedCache;
+}
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function teamStatus(team){
+  if(!team.games) return {err:true};
+  const now=new Date();
+  const today=team.games.find(g=>sameDay(g.date,now)&&g.state!=="post") || team.games.find(g=>g.state==="in");
+  const next=team.games.find(g=>!g.done && g.date>=new Date(now.getTime()-3*3600*1000));
+  return {today, next};
+}
+function gameWatchCard(sched,tstat){
+  const rows=sched.map(t=>{
+    const s=tstat[t.key];
+    if(s.err){ return `<div class="game"><span class="gteam">${t.emoji} ${t.label}</span><div class="gmeta"><span>schedule unavailable</span></div></div>`; }
+    const g=s.today||s.next;
+    if(!g){ return `<div class="game"><span class="gteam">${t.emoji} ${t.label}</span><div class="gmeta"><span>offseason — see you next year</span></div></div>`; }
+    const today=!!s.today, live=g.state==="in";
+    const vs=(g.home?"vs ":"@ ")+esc(g.opp);
+    const time=g.date.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    const when=live?"Live now":(today?("Today · "+time):(g.date.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+" · "+time));
+    return `<div class="game ${today?'today':''}"><span class="gteam">${t.emoji} ${esc(t.label)}</span>
+      <div class="gmeta"><b>${vs}</b><span>${when}</span></div>${today?`<span class="gbadge">${live?'Live':'Game day'}</span>`:''}</div>`;
+  }).join("");
+  return `<div class="card"><h2>Game watch</h2><div class="games">${rows}</div>
+    <p class="disclaim">Packers &amp; Brewers, pulled live from ESPN.</p></div>`;
 }
 
 /* ================= stay-home verdict ================= */
@@ -543,8 +616,8 @@ async function go(place){
   const aUrl="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon+
     "&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto";
   try{
-    const [fc, air, alerts] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon) ]);
-    render(place, fc, air, alerts);
+    const [fc, air, alerts, schedules] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), getSchedules() ]);
+    render(place, fc, air, alerts, schedules);
   }catch(err){ showMsg("The forecast servers ghosted us. "+esc(err.message||"")+" — try again or pick another spot.",false); }
 }
 
@@ -572,7 +645,7 @@ function hourlyCards(fc){
   return out;
 }
 
-function render(place, fc, air, alerts){
+function render(place, fc, air, alerts, schedules){
   const cur=fc.current, d=fc.daily;
   const temp=cur.temperature_2m, feels=cur.apparent_temperature, hum=cur.relative_humidity_2m;
   const wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code, isDay=cur.is_day===1;
@@ -604,6 +677,28 @@ function render(place, fc, air, alerts){
   const aqiPct = aqi==null?0:Math.max(2,Math.min(100,(aqi/400)*100));
   const dayHum=dailyHumidity(fc);
   const now=new Date();
+
+  // seasonal smarts + team schedules
+  const sea=seasonInfo();
+  const sched = schedules||[];
+  const tstat={}; sched.forEach(t=>{ tstat[t.key]=teamStatus(t); });
+  const gameTodaySport = (sched.find(t=>tstat[t.key] && tstat[t.key].today)||{}).key || null;
+  let lines=sportsLines(feels,temp,wind,gust,pop0,code);
+  lines.forEach(l=>{
+    if(l.key==="baseball" && !sea.baseball){ l.text="Offseason. The only things flying are free-agent rumors and the grounds crew's day off."; l.lean="Offseason"; l.cls="push"; }
+    if(l.key==="football" && !sea.football){ l.text="Offseason. The tundra rests; mock drafts and regret fill the void."; l.lean="Offseason"; l.cls="push"; }
+    if(l.key==="golf" && !sea.golf){ l.text="Course would be frozen or underwater. This is a simulator-and-a-beer situation."; l.lean="Closed"; l.cls="push"; }
+    if(gameTodaySport && l.key===gameTodaySport){ l.text="🚨 Game day. "+l.text; }
+  });
+  const otherTeam = sea.primary==="football"?"baseball":"football";
+  const pri={}; let pp=0;
+  if(gameTodaySport) pri[gameTodaySport]=pp++;
+  if(pri[sea.primary]==null) pri[sea.primary]=pp++;
+  if(pri[otherTeam]==null) pri[otherTeam]=pp++;
+  if(pri.golf==null) pri.golf=pp++;
+  if(pri.tailgate==null) pri.tailgate=pp++;
+  lines.sort((a,b)=>(pri[a.key]??99)-(pri[b.key]??99));
+
   const placeLabel = place.admin1 ? `${esc(place.name)}, <span>${esc(place.admin1)}</span>` : esc(place.name||"Your location");
 
   content.innerHTML=`
@@ -637,10 +732,11 @@ function render(place, fc, air, alerts){
         <p>${humidityNote(hum,temp)}</p></div>
     </div>
 
-    <div class="section-head"><h2>The Ballpark Report</h2><small>weather vs. the game</small></div>
+    <div class="section-head"><h2>The Ballpark Report</h2><small>weather vs. the game</small><span class="season-tag">${sea.label}</span></div>
     <div class="grid">
+      ${gameWatchCard(schedules||[], tstat)}
       <div class="card"><h2>The weather line</h2>
-        <div class="lines">${sportsLines(feels,temp,wind,gust,pop0,code).map(l=>
+        <div class="lines">${lines.map(l=>
           `<div class="line"><span class="lg" aria-hidden="true">${l.icon}</span><div class="lx"><b>${l.sport}.</b> ${l.text}</div><span class="lean ${l.cls}">${l.lean}</span></div>`).join("")}</div>
         <p class="disclaim">Entertainment only, not betting advice. The only lock is that the weather will let you down.</p></div>
       <div class="card"><h2>Dressing for the bleachers</h2>
