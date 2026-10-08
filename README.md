@@ -25,13 +25,15 @@ no build, no dependencies, no API keys — plus a Capacitor wrapper for iOS/Andr
   **precipitation** radar (RainViewer), **cloud** cover (infrared satellite), and a
   **wind** arrow field (Open-Meteo) — all keyless
 
-> **Forecast accuracy is the #1 priority** — see **[ACCURACY.md](ACCURACY.md)** for the
-> data path (Open-Meteo `best_match` = HRRR + NBM + GFS for the Midwest) and the roadmap
-> (adding the official NWS gridpoint forecast as the US primary, a verification loop, etc.).
+> **Forecast accuracy is the #1 priority** — see **[ACCURACY.md](ACCURACY.md)**. In the
+> US the **official NWS gridpoint forecast** (`api.weather.gov`) is now the primary for
+> current conditions, the hourly strip, the trend chart, and today's rain odds (shown as
+> an "NWS" badge), with Open-Meteo `best_match` (HRRR + NBM + GFS) as the base layer and
+> the fallback outside the US.
 
 ## Sources
-- Official hazard alerts: [National Weather Service](https://www.weather.gov) (`api.weather.gov`)
-- Forecast / humidity / air quality / pressure: [Open-Meteo](https://open-meteo.com) (NOAA GFS/HRRR)
+- Official forecast (US) + hazard alerts: [National Weather Service](https://www.weather.gov) (`api.weather.gov`)
+- Forecast base / 10-day / humidity / air quality / pressure / UV / sun: [Open-Meteo](https://open-meteo.com) (NOAA GFS/HRRR)
 - Team schedules: ESPN public API · ZIP lookup: Zippopotam.us
 
 ## Run it (web)

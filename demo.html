@@ -1105,6 +1105,47 @@ function renderHoliday(h){
 let _lastPlace=null;
 function sportsEnabled(){ try{ return localStorage.getItem("hwd.sports")!=="off"; }catch(e){ return true; } }
 
+/* ================= NWS official forecast (US primary; overlays Open-Meteo) ================= */
+const NWS_DIR={N:0,NNE:22,NE:45,ENE:67,E:90,ESE:112,SE:135,SSE:157,S:180,SSW:202,SW:225,WSW:247,W:270,WNW:292,NW:315,NNW:337};
+function nwsCode(icon){
+  const m=(icon||"").match(/\/(?:day|night)\/([a-z_]+)/i), tok=m?m[1]:"";
+  if(/tsra|tornado|hurricane/.test(tok)) return 95;
+  if(/blizzard/.test(tok)) return 75;
+  if(/snow/.test(tok)) return 73;
+  if(/fzra|sleet|ice|freezing/.test(tok)) return 66;
+  if(/rain_showers|shra/.test(tok)) return 80;
+  if(/rain/.test(tok)) return 63;
+  if(/fog|haze|smoke|dust/.test(tok)) return 45;
+  if(/ovc|bkn/.test(tok)) return 3;
+  if(/sct/.test(tok)) return 2;
+  if(/few/.test(tok)) return 1;
+  if(/skc|clear/.test(tok)) return 0;
+  return 2;
+}
+function parseMph(s){ const m=(s||"").match(/(\d+)(?!.*\d)/); return m?+m[1]:0; }
+function feelsLike(tF,rh,mph){
+  if(tF>=80 && rh!=null){ const T=tF,R=rh;
+    return Math.round(-42.379+2.04901523*T+10.14333127*R-0.22475541*T*R-0.00683783*T*T-0.05481717*R*R+0.00122874*T*T*R+0.00085282*T*R*R-0.00000199*T*T*R*R); }
+  if(tF<=50 && mph>=3){ const V=Math.pow(mph,0.16); return Math.round(35.74+0.6215*tF-35.75*V+0.4275*tF*V); }
+  return Math.round(tF);
+}
+async function nwsForecast(lat,lon){
+  try{
+    const pts=await withTimeout(getJSON(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`),6500);
+    const url=pts&&pts.properties&&pts.properties.forecastHourly; if(!url) return null; // outside US -> null
+    const d=await withTimeout(getJSON(url),7000);
+    const per=(d.properties&&d.properties.periods)||[]; if(!per.length) return null;
+    const toF=p=>p.temperatureUnit==="C"?p.temperature*9/5+32:p.temperature;
+    const hours=per.map(p=>({ t:(p.startTime||"").slice(0,16), temp:toF(p),
+      pop:(p.probabilityOfPrecipitation&&p.probabilityOfPrecipitation.value)||0,
+      rh:(p.relativeHumidity&&p.relativeHumidity.value), wind:parseMph(p.windSpeed),
+      code:nwsCode(p.icon), isDay:p.isDaytime?1:0 }));
+    const c=per[0];
+    return { source:"NWS", hours, current:{ temp:toF(c), rh:(c.relativeHumidity&&c.relativeHumidity.value),
+      wind:parseMph(c.windSpeed), windDir:(NWS_DIR[(c.windDirection||"").toUpperCase()]), code:nwsCode(c.icon), isDay:c.isDaytime?1:0 } };
+  }catch(e){ return null; }
+}
+
 async function go(place){
   savePlace(place); _lastPlace=place; rememberLocation(place); $("#q").value="";
   showMsg('<span class="spin"></span>&nbsp;&nbsp;Reading the clouds over '+esc(place.name||"there")+"…",true);
@@ -1120,7 +1161,8 @@ async function go(place){
   try{
     const tm = teamsFor(place);
     const schedP = tm.keys.length ? getSchedules(tm.keys) : Promise.resolve([]);
-    const [fc, air, alerts, schedules] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), schedP ]);
+    const [fc, air, alerts, schedules, nws] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), schedP, nwsForecast(lat,lon).catch(()=>null) ]);
+    fc._nws = nws; // official US forecast overlays Open-Meteo where present
     render(place, fc, air, alerts, {list:schedules, metro:tm.metro});
   }catch(err){ showMsg("The forecast servers ghosted us. "+esc(err.message||"")+" — try again or pick another spot.",false); }
 }
@@ -1132,7 +1174,18 @@ function dailyHumidity(fc){
 }
 
 function hourlyCards(fc){
-  const h=fc.hourly, off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off;
+  const off=(fc.utc_offset_seconds||0)*1000, nowU=Date.now()+off, N=fc._nws;
+  if(N){ let s=N.hours.findIndex(x=>Date.parse(x.t+"Z")>=nowU-3600000); if(s<0) s=0;
+    const e=Math.min(s+24,N.hours.length); let o="";
+    for(let i=s;i<e;i++){ const x=N.hours[i], u=Date.parse(x.t+"Z");
+      const label=i===s?"Now":new Date(u).toLocaleTimeString('en-US',{hour:'numeric',timeZone:'UTC'}).replace(" ","");
+      let [,ic]=wmo(x.code); if((x.code===0||x.code===1)&&!x.isDay) ic="🌙";
+      const pop=Math.round(x.pop||0);
+      o+=`<div class="hour"><div class="hr">${label}</div><div class="hic" aria-hidden="true">${ic}</div>`+
+         `<div class="ht">${Math.round(x.temp)}°</div><div class="hp ${pop>=40?'wet':''}">${pop>0?('💧'+pop+'%'):'·'}</div></div>`; }
+    return o;
+  }
+  const h=fc.hourly;
   let start=h.time.findIndex(t=>Date.parse(t+"Z")>=nowU-3600000);
   if(start<0) start=0;
   const end=Math.min(start+24,h.time.length); let out="";
@@ -1151,11 +1204,17 @@ function hourlyCards(fc){
 
 function render(place, fc, air, alerts, sports){
   const cur=fc.current, d=fc.daily;
-  const temp=cur.temperature_2m, feels=cur.apparent_temperature, hum=cur.relative_humidity_2m;
-  const wind=cur.wind_speed_10m, gust=cur.wind_gusts_10m, code=cur.weather_code, isDay=cur.is_day===1;
-  const windDir=cur.wind_direction_10m;
+  const N=fc._nws, offMs0=(fc.utc_offset_seconds||0)*1000, todayStr0=new Date(Date.now()+offMs0).toISOString().slice(0,10);
+  let temp,feels,hum,wind,gust,code,isDay,windDir;
+  if(N){ temp=N.current.temp; hum=(N.current.rh!=null?N.current.rh:cur.relative_humidity_2m); wind=N.current.wind;
+    gust=cur.wind_gusts_10m; code=N.current.code; isDay=N.current.isDay===1; windDir=(N.current.windDir!=null?N.current.windDir:cur.wind_direction_10m);
+    feels=feelsLike(temp,hum,wind); }
+  else { temp=cur.temperature_2m; feels=cur.apparent_temperature; hum=cur.relative_humidity_2m;
+    wind=cur.wind_speed_10m; gust=cur.wind_gusts_10m; code=cur.weather_code; isDay=cur.is_day===1; windDir=cur.wind_direction_10m; }
   const aqi = air && air.current ? air.current.us_aqi : null;
-  const pop0 = d.precipitation_probability_max ? d.precipitation_probability_max[0] : 0;
+  let pop0;
+  if(N){ let p=0; N.hours.forEach(h=>{ if(h.t.slice(0,10)===todayStr0 && (h.pop||0)>p) p=h.pop; }); pop0=Math.round(p); }
+  else pop0 = d.precipitation_probability_max ? d.precipitation_probability_max[0] : 0;
   const uv0 = d.uv_index_max ? d.uv_index_max[0] : 0;
   const tier = sevTier(alerts);
   const [condLabel,glyph]=wmo(code);
@@ -1235,7 +1294,7 @@ function render(place, fc, air, alerts, sports){
     alert: alerts.length ? {event:alerts[0].event, headline:(alerts[0].headline||"")} : null
   };
   { const lb=$("#locbar"); if(lb){ lb.hidden=false;
-    lb.innerHTML=`<span class="lcity">${esc(_snap.place)}</span><span class="lmeta">Updated ${now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span>`; } }
+    lb.innerHTML=`<span class="lcity">${esc(_snap.place)}</span><span class="lmeta">Updated ${now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}${N?" · NWS":""}</span>`; } }
 
   // tile + chart data
   const hiT=Math.round(d.temperature_2m_max[0]), loT=Math.round(d.temperature_2m_min[0]);
@@ -1249,7 +1308,9 @@ function render(place, fc, air, alerts, sports){
     else if(nowL<ssMs){ sunIcon="🌇";sunTitle="Sunset";sunVal=fmtHM(ssMs);sunSub="in "+dur(ssMs-nowL); }
     else { const sr2=d.sunrise[1]?Date.parse(d.sunrise[1]+"Z"):null; sunVal=fmtHM(sr2||srMs); sunSub=sr2?("in "+dur(sr2-nowL)):"tomorrow"; }
   }
-  _trend={ nowMs:nowL, ht:fc.hourly.time.map(t=>Date.parse(t+"Z")), htemp:fc.hourly.temperature_2m,
+  _trend={ nowMs:nowL,
+    ht:(N?N.hours.map(h=>Date.parse(h.t+"Z")):fc.hourly.time.map(t=>Date.parse(t+"Z"))),
+    htemp:(N?N.hours.map(h=>h.temp):fc.hourly.temperature_2m),
     dt:d.time.map(t=>Date.parse(t+"T12:00:00Z")), dhi:d.temperature_2m_max, dlo:d.temperature_2m_min };
 
   content.innerHTML=`
@@ -1372,7 +1433,7 @@ function render(place, fc, air, alerts, sports){
     <div class="strip">${d.time.map((iso,i)=>dayCard(iso,i,d,dayHum)).join("")}</div>
     </section>
   `;
-  $("#srcLine").textContent="Pulled "+now.toLocaleString()+". Not a substitute for official warnings — if a siren goes off, don't finish reading this app.";
+  $("#srcLine").textContent=(N?"Forecast: NWS (official) + Open-Meteo. ":"Forecast: Open-Meteo. ")+"Pulled "+now.toLocaleString()+". Not a substitute for official warnings — if a siren goes off, don't finish reading this app.";
   initTrend();
   showTab(currentTab());
 }
