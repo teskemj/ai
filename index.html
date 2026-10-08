@@ -8,10 +8,10 @@
 <style>
   /* LAYOUT: a live scenic sky fills the screen; the current-conditions hero floats over it as glass, with solid panels below for the verdicts, an hour-by-hour strip, and the 10-day almanac. */
   :root{
-    --bg:#cfe0f0; --panel:#ffffff; --panel-2:#f6f8fa; --ink:#18212e; --ink-soft:#50606f;
+    --bg:#eceff3; --panel:#ffffff; --panel-2:#f6f8fa; --ink:#18212e; --ink-soft:#50606f;
     --line:#d7dee5; --accent:#1f6f8b; --accent-ink:#0f4a5e; --amber:#c47a1a; --amber-bg:#fbf0dc;
     --good:#2e7d4f; --warn:#c27c16; --bad:#c23b2e; --crit:#9a2b8f; --haz:#7a1d1d;
-    --glass:rgba(255,255,255,.82); --glass-brd:rgba(255,255,255,.65);
+    --glass:var(--panel); --glass-brd:var(--line);
     --shadow:0 1px 2px rgba(20,30,45,.08),0 10px 30px rgba(20,30,45,.14);
     --disp:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
     --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -21,21 +21,21 @@
     --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
     --line:#2a3744; --accent:#56b6cf; --accent-ink:#8fd4e6; --amber:#e6a94a; --amber-bg:#2a2214;
     --good:#5fcf8e; --warn:#e6b14a; --bad:#ef6a5c; --crit:#d97fce; --haz:#e05a5a;
-    --glass:rgba(16,22,30,.72); --glass-brd:rgba(255,255,255,.10);
+    --glass:var(--panel); --glass-brd:var(--line);
     --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4); color-scheme:dark;
   }}
   :root[data-theme="dark"]{
     --bg:#0d131b; --panel:#141c26; --panel-2:#1a242f; --ink:#e7edf3; --ink-soft:#9fb0c0;
     --line:#2a3744; --accent:#56b6cf; --accent-ink:#8fd4e6; --amber:#e6a94a; --amber-bg:#2a2214;
-    --glass:rgba(16,22,30,.72); --glass-brd:rgba(255,255,255,.10);
+    --glass:var(--panel); --glass-brd:var(--line);
     --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4); color-scheme:dark;
   }
 
   *{box-sizing:border-box}
   [hidden]{display:none!important}
   html{background:var(--bg);margin:0}
-  body{margin:0;background:transparent;color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
-  #sky{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
+  #sky{display:none}
   .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
 
   /* Masthead */
@@ -121,6 +121,30 @@
   .quip b{font-family:var(--disp)}
 
   /* Verdict grid */
+  /* stat tiles (FeyCast-style dashboard grid) */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow)}
+  .tile.lead{outline:1.5px solid var(--accent);outline-offset:-1.5px}
+  .tile .tlabel{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  .tile .tval{font-family:var(--disp);font-weight:700;font-size:1.85rem;line-height:1.05;margin-top:7px;font-variant-numeric:tabular-nums}
+  .tile .tsub{font-size:.75rem;color:var(--ink-soft);margin-top:3px}
+  /* temperature trend chart */
+  .trend-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .trend-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .trend-head h2{font-family:var(--disp);font-weight:700;font-size:1.05rem;letter-spacing:-.01em;margin:0}
+  .trend-head .ranges{display:flex;gap:4px;margin-left:auto}
+  .ranges button{font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;padding:6px 10px;border-radius:8px}
+  .ranges button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+  .trend-wrap{position:relative;width:100%;height:280px}
+  #trend{width:100%;height:100%;display:block;touch-action:pan-y}
+  /* the witty read + share */
+  .read{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:0 14px 14px 0;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .read .rtxt{flex:1;min-width:0;font-size:.96rem}
+  .read .rtxt b{font-family:var(--disp)}
+  .read .sharebtn{position:static}
+  @media(max-width:560px){ .trend-wrap{height:230px} }
+
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px;margin-bottom:18px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
   .card h2{margin:0 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
@@ -1186,30 +1210,51 @@ function render(place, fc, air, alerts, sports){
     alert: alerts.length ? {event:alerts[0].event, headline:(alerts[0].headline||"")} : null
   };
 
+  // tile + chart data
+  const hiT=Math.round(d.temperature_2m_max[0]), loT=Math.round(d.temperature_2m_min[0]);
+  const fdiff=Math.round(feels)-Math.round(temp), fdiffSub=fdiff<0?(-fdiff)+"° cooler":(fdiff>0?fdiff+"° warmer":"like actual");
+  const dewv=dewPointF(temp,hum), mp=moonPhase(Date.now()), uvc=uvCat(uv0);
+  const nowL=Date.now()+(fc.utc_offset_seconds||0)*1000;
+  const srMs=d.sunrise?Date.parse(d.sunrise[0]+"Z"):null, ssMs=d.sunset?Date.parse(d.sunset[0]+"Z"):null;
+  let sunIcon="🌅",sunTitle="Sunrise",sunVal="—",sunSub="";
+  if(srMs!=null&&ssMs!=null){
+    if(nowL<srMs){ sunIcon="🌅";sunTitle="Sunrise";sunVal=fmtHM(srMs);sunSub="in "+dur(srMs-nowL); }
+    else if(nowL<ssMs){ sunIcon="🌇";sunTitle="Sunset";sunVal=fmtHM(ssMs);sunSub="in "+dur(ssMs-nowL); }
+    else { const sr2=d.sunrise[1]?Date.parse(d.sunrise[1]+"Z"):null; sunVal=fmtHM(sr2||srMs); sunSub=sr2?("in "+dur(sr2-nowL)):"tomorrow"; }
+  }
+  _trend={ nowMs:nowL, ht:fc.hourly.time.map(t=>Date.parse(t+"Z")), htemp:fc.hourly.temperature_2m,
+    dt:d.time.map(t=>Date.parse(t+"T12:00:00Z")), dhi:d.temperature_2m_max, dlo:d.temperature_2m_min };
+
   content.innerHTML=`
     ${ (DEMO||isPro()) ? "" : inTrial()
         ? `<div class="trial-note">✨ <b>Premium trial</b> — ${trialDaysLeft()} day${trialDaysLeft()===1?"":"s"} left, everything unlocked. <button class="linkbtn" data-pro-open>Keep Premium</button></div>`
         : isPreview()
         ? `<div class="preview-note">🔓 <b>Preview mode</b> — you're seeing Premium features. <button class="linkbtn" data-pro-open>Unlock Premium</button></div>`
         : "" }
-    <section class="hero">
-      <div class="hero-grid">
-        <div class="glyph" aria-hidden="true">${glyph}</div>
-        <div>
-          <div class="place">${placeLabel}</div>
-          <div class="asof">As of ${now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})} · ${now.toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"})}</div>
-          <div class="nowtemp"><b>${Math.round(temp)}</b><span class="deg">°F</span></div>
-          <div class="cond">${esc(condLabel)}</div>
-          <div class="feels">Feels like ${Math.round(feels)}°</div>
+    <div class="tiles">
+      ${tileHTML("🌡️","Temperature",Math.round(temp)+"°",`H ${hiT}° · L ${loT}°`,"var(--accent)",true)}
+      ${tileHTML("🧥","Feels Like",Math.round(feels)+"°",fdiffSub,"var(--accent)")}
+      ${tileHTML("💧","Rain Today",Math.round(pop0)+"%","chance today","var(--accent)")}
+      ${tileHTML("🌬️","Wind",Math.round(wind)+" mph",(windDir!=null?compass(windDir)+" · ":"")+"gust "+Math.round(gust),"var(--accent)")}
+      ${tileHTML("💦","Humidity",hum+"%",humWord(hum),"var(--accent)")}
+      ${tileHTML(sunIcon,sunTitle,sunVal,sunSub,"var(--amber)")}
+      ${tileHTML("✨","Air Quality",aqi==null?"—":Math.round(aqi),"US AQI · "+cat.label,cat.color)}
+      ${tileHTML("🌫️","Dew Point",Math.round(dewv)+"°",dewWord(dewv),"var(--accent)")}
+      ${tileHTML(mp.emoji,"Moon",mp.illum+"%",mp.name,"var(--accent)")}
+      ${tileHTML("☀️","UV Index",Math.round(uv0),uvc.label,uvc.color)}
+    </div>
+
+    <div class="trend-card">
+      <div class="trend-head"><h2>${esc(condLabel)} · ${Math.round(temp)}°</h2>
+        <div class="ranges" id="trendRanges">
+          <button data-r="24h" class="sel">24H</button><button data-r="48h">48H</button><button data-r="7d">7D</button>
         </div>
       </div>
-      <button class="sharebtn" data-share aria-label="Share this forecast">📤 Share</button>
-      <div class="nowstats">
-        ${chip("Humidity",hum+"%")}${chip("Wind",(windDir!=null?compass(windDir)+" ":"")+Math.round(wind)+" mph")}${chip("Gusts",Math.round(gust)+" mph")}
-        ${chip("Rain today",Math.round(pop0)+"%")}${chip("UV index",Math.round(uv0))}${chip("Air (AQI)", aqi==null?"—":Math.round(aqi))}
-      </div>
-      <div class="quip"><b>The read:</b> ${heroQuip(feels,temp,hum,wind,code,isDay)}</div>
-    </section>
+      <div class="trend-wrap"><canvas id="trend"></canvas></div>
+    </div>
+
+    <div class="read"><div class="rtxt"><b>The read:</b> ${heroQuip(feels,temp,hum,wind,code,isDay)}</div>
+      <button class="sharebtn" data-share aria-label="Share this forecast">📤 Share</button></div>
 
     <div class="grid">
       <div class="card"><h2>Should you stay home?</h2><div class="verdict ${vq.cls}">${vq.title}</div><p>${vq.blurb}</p></div>
@@ -1294,6 +1339,7 @@ function render(place, fc, air, alerts, sports){
     <div class="strip">${d.time.map((iso,i)=>dayCard(iso,i,d,dayHum)).join("")}</div>
   `;
   $("#srcLine").textContent="Pulled "+now.toLocaleString()+". Not a substitute for official warnings — if a siren goes off, don't finish reading this app.";
+  initTrend();
 }
 
 function chip(k,v){ return `<div class="chip"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
@@ -1538,11 +1584,7 @@ function frame(){
   if(!REDUCED) requestAnimationFrame(frame);
 }
 
-window.addEventListener("resize",resize);
-resize();
-if(REDUCED){ // draw a few static frames so motion settles, then stop
-  let k=0; (function step(){ frame(); if(k++<3) setTimeout(step,0); })();
-} else { requestAnimationFrame(frame); }
+/* Scenic sky retired for the flat dashboard look — engine kept dormant (not started). */
 
 /* ================= shareable forecast / alert card ================= */
 let _snap=null;
@@ -1642,6 +1684,82 @@ async function initPush(){
     await Push.register();
   }catch(e){ console.warn("initPush",e); }
 }
+
+/* ================= stat tiles + temperature trend chart ================= */
+function tileHTML(icon,label,value,sub,color,lead){
+  return `<div class="tile${lead?" lead":""}"><div class="tlabel">${icon} ${esc(label)}</div>`+
+    `<div class="tval"${color?` style="color:${color}"`:""}>${value}</div><div class="tsub">${esc(sub)}</div></div>`;
+}
+function humWord(h){ return h>=80?"Muggy":h>=65?"Humid":h>=40?"Comfortable":h>=25?"Dry":"Very dry"; }
+function dewPointF(tF,rh){ const tC=(tF-32)*5/9,a=17.625,b=243.04,g=Math.log(Math.max(1,rh)/100)+(a*tC)/(b+tC); return ((b*g)/(a-g))*9/5+32; }
+function dewWord(d){ return d<50?"Comfortable":d<60?"Slightly humid":d<65?"Humid":d<70?"Oppressive":"Miserable"; }
+function uvCat(u){ u=Math.round(u); if(u<=2) return {label:"Low",color:"var(--good)"}; if(u<=5) return {label:"Moderate",color:"var(--warn)"};
+  if(u<=7) return {label:"High",color:"#e08a2e"}; if(u<=10) return {label:"Very high",color:"var(--bad)"}; return {label:"Extreme",color:"var(--crit)"}; }
+function fmtHM(ms){ return new Date(ms).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"UTC"}); }
+function dur(ms){ const m=Math.max(0,Math.round(ms/60000)),h=Math.floor(m/60),mm=m%60; return h?`${h}h ${mm}m`:`${mm}m`; }
+
+let _trend=null,_trendRange="24h";
+function getCSS(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function hexA(col,a){ col=(col||"").trim(); if(col[0]==="#"){ const h=col.slice(1);
+    return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`; }
+  const m=col.match(/\d+/g); return m?`rgba(${m[0]},${m[1]},${m[2]},${a})`:col; }
+const bodyFont=()=>"'IBM Plex Sans',sans-serif", monoFont=()=>"'IBM Plex Mono',monospace";
+function tDot(x,px,py,col){ x.beginPath(); x.fillStyle=col; x.arc(px,py,4.5,0,6.2832); x.fill(); x.lineWidth=2; x.strokeStyle=getCSS("--panel"); x.stroke(); }
+function interpAt(pts,t){ for(let i=1;i<pts.length;i++){ if(pts[i].x>=t){ const a=pts[i-1],b=pts[i],f=(t-a.x)/((b.x-a.x)||1); return a.y+(b.y-a.y)*f; } } return pts.length?pts[pts.length-1].y:null; }
+function trendSeries(){
+  const now=_trend.nowMs;
+  if(_trendRange==="7d"){ const t0=_trend.dt[0]-12*3.6e6, t1=_trend.dt[Math.min(6,_trend.dt.length-1)]+12*3.6e6, pts=[];
+    for(let i=0;i<Math.min(7,_trend.dt.length);i++) pts.push({x:_trend.dt[i],hi:_trend.dhi[i],lo:_trend.dlo[i]}); return {mode:"daily",t0,t1,pts,now}; }
+  const span=_trendRange==="48h"?48:24, back=_trendRange==="48h"?12:6, t0=now-back*3.6e6, t1=t0+span*3.6e6, pts=[];
+  for(let i=0;i<_trend.ht.length;i++) if(_trend.ht[i]>=t0&&_trend.ht[i]<=t1) pts.push({x:_trend.ht[i],y:_trend.htemp[i]});
+  return {mode:"hourly",t0,t1,pts,now};
+}
+function drawTrend(ev){
+  const c=document.getElementById("trend"); if(!c||!_trend) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1), W=c.clientWidth, H=c.clientHeight;
+  if(!W||!H) return; c.width=W*dpr; c.height=H*dpr; const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+  const ink=getCSS("--ink"), soft=getCSS("--ink-soft"), line=getCSS("--line"), acc=getCSS("--accent"), panel=getCSS("--panel");
+  const S=trendSeries(), padL=40,padR=14,padT=18,padB=26, plotW=W-padL-padR, plotH=H-padT-padB;
+  const vals=[]; S.pts.forEach(p=> S.mode==="daily"?vals.push(p.hi,p.lo):vals.push(p.y));
+  if(!vals.length){ x.fillStyle=soft; x.font="13px "+bodyFont(); x.fillText("No data for this range",padL,padT+20); return; }
+  let mn=Math.min(...vals), mx=Math.max(...vals); const pd=Math.max(3,(mx-mn)*0.15); mn-=pd; mx+=pd;
+  const X=t=>padL+((t-S.t0)/(S.t1-S.t0))*plotW, Y=v=>padT+(1-(v-mn)/(mx-mn))*plotH;
+  x.font="11px "+monoFont(); x.textBaseline="middle"; x.textAlign="left";
+  for(let i=0;i<=4;i++){ const v=mn+(mx-mn)*i/4, yy=Y(v); x.globalAlpha=.45; x.strokeStyle=line; x.lineWidth=1; x.beginPath(); x.moveTo(padL,yy); x.lineTo(W-padR,yy); x.stroke(); x.globalAlpha=1; x.fillStyle=soft; x.fillText(Math.round(v)+"°",6,yy); }
+  if(S.now>=S.t0&&S.now<=S.t1){ const nx=X(S.now); x.strokeStyle=soft; x.globalAlpha=.6; x.setLineDash([3,3]); x.beginPath(); x.moveTo(nx,padT); x.lineTo(nx,padT+plotH); x.stroke(); x.setLineDash([]); x.globalAlpha=1; x.fillStyle=soft; x.textBaseline="top"; x.textAlign="left"; x.fillText("NOW",Math.min(nx+4,W-padR-30),padT); }
+  if(S.mode==="hourly"){
+    const past=S.pts.filter(p=>p.x<=S.now), fut=S.pts.filter(p=>p.x>=S.now);
+    if(past.length){ const g=x.createLinearGradient(0,padT,0,padT+plotH); g.addColorStop(0,hexA(acc,.32)); g.addColorStop(1,hexA(acc,0));
+      x.beginPath(); x.moveTo(X(past[0].x),padT+plotH); past.forEach(p=>x.lineTo(X(p.x),Y(p.y))); x.lineTo(X(past[past.length-1].x),padT+plotH); x.closePath(); x.fillStyle=g; x.fill(); }
+    x.strokeStyle=acc; x.lineWidth=2.4; x.lineJoin="round"; x.beginPath(); past.forEach((p,i)=>{ const px=X(p.x),py=Y(p.y); i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke();
+    x.setLineDash([5,4]); x.beginPath(); fut.forEach((p,i)=>{ const px=X(p.x),py=Y(p.y); i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); x.setLineDash([]);
+    let mnP=S.pts[0],mxP=S.pts[0]; S.pts.forEach(p=>{ if(p.y>mxP.y)mxP=p; if(p.y<mnP.y)mnP=p; });
+    x.font="bold 11px "+monoFont(); x.textAlign="center";
+    x.fillStyle=ink; x.textBaseline="bottom"; x.fillText("▲ "+Math.round(mxP.y)+"°",X(mxP.x),Y(mxP.y)-8);
+    x.textBaseline="top"; x.fillText("▼ "+Math.round(mnP.y)+"°",X(mnP.x),Y(mnP.y)+8);
+    const nv=interpAt(S.pts,S.now); if(nv!=null) tDot(x,X(S.now),Y(nv),acc);
+    x.fillStyle=soft; x.font="10px "+monoFont(); x.textAlign="center"; x.textBaseline="top";
+    for(let i=0;i<=5;i++){ const t=S.t0+(S.t1-S.t0)*i/5; x.fillText(fmtHM(t).replace(" ",""),Math.max(padL+12,Math.min(W-padR-12,X(t))),padT+plotH+6); }
+    if(ev){ const rect=c.getBoundingClientRect(), mxv=ev.clientX-rect.left; let best=null,bd=1e9; S.pts.forEach(p=>{ const dd=Math.abs(X(p.x)-mxv); if(dd<bd){bd=dd;best=p;} });
+      if(best&&bd<40){ const px=X(best.x),py=Y(best.y); x.strokeStyle=line; x.setLineDash([3,3]); x.beginPath(); x.moveTo(px,padT); x.lineTo(px,padT+plotH); x.stroke(); x.setLineDash([]); tDot(x,px,py,acc);
+        const txt=fmtHM(best.x).replace(" ","")+"  "+Math.round(best.y)+"°"; x.font="12px "+bodyFont(); const w=x.measureText(txt).width+16; let tx=Math.max(4,Math.min(W-w-4,px-w/2));
+        x.fillStyle=panel; x.strokeStyle=line; x.lineWidth=1; _round(x,tx,4,w,22,6); x.fill(); x.stroke(); x.fillStyle=ink; x.textBaseline="middle"; x.textAlign="center"; x.fillText(txt,tx+w/2,15); } }
+  } else {
+    x.strokeStyle=acc; x.lineWidth=2.4; x.lineJoin="round"; x.beginPath(); S.pts.forEach((p,i)=>{ const px=X(p.x),py=Y(p.hi); i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke();
+    x.strokeStyle=soft; x.lineWidth=1.6; x.setLineDash([4,3]); x.beginPath(); S.pts.forEach((p,i)=>{ const px=X(p.x),py=Y(p.lo); i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); x.setLineDash([]);
+    x.textAlign="center"; S.pts.forEach(p=>{ tDot(x,X(p.x),Y(p.hi),acc); x.fillStyle=ink; x.font="10px "+monoFont(); x.textBaseline="bottom"; x.fillText(Math.round(p.hi)+"°",X(p.x),Y(p.hi)-6);
+      x.fillStyle=soft; x.textBaseline="top"; x.fillText(new Date(p.x).toLocaleDateString("en-US",{weekday:"short",timeZone:"UTC"}),X(p.x),padT+plotH+6); });
+  }
+  x.textAlign="left"; x.textBaseline="alphabetic";
+}
+function initTrend(){
+  const c=document.getElementById("trend"); if(!c||!_trend) return;
+  const btns=document.querySelectorAll("#trendRanges button");
+  btns.forEach(b=>b.addEventListener("click",()=>{ _trendRange=b.dataset.r; btns.forEach(z=>z.classList.toggle("sel",z===b)); drawTrend(); }));
+  c.addEventListener("pointermove",e=>drawTrend(e)); c.addEventListener("pointerleave",()=>drawTrend());
+  requestAnimationFrame(()=>drawTrend());
+}
+window.addEventListener("resize",()=>{ if(_trend && document.getElementById("trend")) drawTrend(); });
 
 /* ================= radar & weather maps ================= */
 let _map=null,_base=null,_overlay=null,_marker=null,_frames=[],_sat=[],_pastCount=0,_frameIdx=0,_playing=false,_playTimer=null,_curLayer="precip",_windT=null;
