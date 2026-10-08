@@ -36,7 +36,18 @@
   html{background:var(--bg);margin:0}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
   #sky{display:none}
-  .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+  .wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:0 48px;display:flex;gap:18px;align-items:flex-start}
+  #nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);flex:0 0 172px;display:flex;flex-direction:column;gap:4px}
+  #nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:10px;padding:10px 12px;color:var(--ink-soft);font-weight:600;font-size:.95rem}
+  #nav button:hover{background:var(--panel-2)}
+  #nav button.sel{background:var(--panel);border-color:var(--line);color:var(--ink);box-shadow:var(--shadow)}
+  #nav .ni{font-size:1.05rem;width:1.3em;text-align:center;flex:0 0 auto}
+  #stage{flex:1;min-width:0}
+  @media(max-width:820px){
+    .wrap{flex-direction:column;gap:12px}
+    #nav{top:calc(env(safe-area-inset-top,0px) + 60px);z-index:30;flex-direction:row;overflow-x:auto;flex:0 0 auto;width:100%;background:var(--bg);padding-block:6px}
+    #nav button{width:auto;white-space:nowrap;flex:0 0 auto;padding:8px 12px}
+  }
 
   /* Masthead */
   header.mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--glass);
@@ -253,7 +264,8 @@
   .layer-sel{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
   .layer-sel button{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;padding:7px 11px;border-radius:999px}
   .layer-sel button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
-  #map{flex:1;min-height:0;background:var(--panel-2)}
+  .radar-card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  #map{height:min(62vh,560px);background:var(--panel-2)}
   #map .leaflet-control-attribution{font-size:9px}
   #map.mapdark .leaflet-basemap-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
   .radar-bottom{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
@@ -333,8 +345,6 @@
       </form>
       <div id="sugg" hidden></div>
     </div>
-    <button id="radarBtn" class="icon" title="Radar & maps" aria-label="Radar and maps">🗺️</button>
-    <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
     <button id="proBtn" class="icon pro" title="Premium" aria-label="Premium features">Premium</button>
     <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
     <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
@@ -363,39 +373,46 @@
   </div>
 </div>
 
-<div id="radarModal" class="modal radar" hidden>
-  <div class="radar-sheet">
-    <div class="radar-top">
-      <strong>Radar &amp; maps</strong>
-      <div class="layer-sel">
-        <button data-layer="precip" class="sel">Precip</button>
-        <button data-layer="clouds">Clouds</button>
-        <button data-layer="wind">Wind</button>
-      </div>
-      <button class="x" data-radar-close aria-label="Close">×</button>
-    </div>
-    <div id="map"></div>
-    <div id="radarBottom" class="radar-bottom">
-      <button id="playBtn" class="icon" aria-label="Play radar loop">▶</button>
-      <input id="timeline" type="range" min="0" max="12" value="12" aria-label="Radar time">
-      <span id="timeLabel" class="tl-label">—</span>
-      <button id="recenterBtn" class="icon" title="Recenter" aria-label="Recenter">◎</button>
-    </div>
-    <div id="mapNote" class="map-note">Precipitation radar</div>
-  </div>
-</div>
-
 <main class="wrap">
-  <div id="holiday" hidden></div>
-  <div id="alerts" class="alerts" hidden></div>
-  <div id="content">
-    <div class="skeleton"><span class="spin"></span>&nbsp;&nbsp;Consulting the sky…</div>
+  <nav id="nav">
+    <button data-tab="live" class="sel"><span class="ni">◉</span><span class="nl">Live</span></button>
+    <button data-tab="forecast"><span class="ni">🗓️</span><span class="nl">Forecast</span></button>
+    <button data-tab="radar"><span class="ni">🗺️</span><span class="nl">Radar</span></button>
+    <button data-tab="sports"><span class="ni">🏈</span><span class="nl">Sports</span></button>
+    <button data-tab="nature"><span class="ni">🎣</span><span class="nl">Field &amp; Stream</span></button>
+  </nav>
+  <div id="stage">
+    <div id="holiday" hidden></div>
+    <div id="alerts" class="alerts" hidden></div>
+    <div id="content">
+      <div class="skeleton"><span class="spin"></span>&nbsp;&nbsp;Consulting the sky…</div>
+    </div>
+    <section id="radarPanel" class="tab-panel" data-panel="radar" hidden>
+      <div class="radar-card">
+        <div class="radar-top">
+          <strong>Radar &amp; maps</strong>
+          <div class="layer-sel">
+            <button data-layer="precip" class="sel">Precip</button>
+            <button data-layer="clouds">Clouds</button>
+            <button data-layer="wind">Wind</button>
+          </div>
+        </div>
+        <div id="map"></div>
+        <div id="radarBottom" class="radar-bottom">
+          <button id="playBtn" class="icon" aria-label="Play radar loop">▶</button>
+          <input id="timeline" type="range" min="0" max="12" value="12" aria-label="Radar time">
+          <span id="timeLabel" class="tl-label">—</span>
+          <button id="recenterBtn" class="icon" title="Recenter" aria-label="Recenter">◎</button>
+        </div>
+        <div id="mapNote" class="map-note">Precipitation radar</div>
+      </div>
+    </section>
+    <footer>
+      Official hazard alerts from the <a href="https://www.weather.gov" target="_blank" rel="noopener">U.S. National Weather Service</a>.
+      Forecast, humidity &amp; air quality via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (NOAA's GFS/HRRR guidance). ZIP lookup via Zippopotam.us. Holidays are U.S.
+      <div class="src" id="srcLine">Not a substitute for official warnings. If a siren goes off, don't finish reading this app.</div>
+    </footer>
   </div>
-  <footer>
-    Official hazard alerts from the <a href="https://www.weather.gov" target="_blank" rel="noopener">U.S. National Weather Service</a>.
-    Forecast, humidity &amp; air quality via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (NOAA's GFS/HRRR guidance). ZIP lookup via Zippopotam.us. Holidays are U.S.
-    <div class="src" id="srcLine">Not a substitute for official warnings. If a siren goes off, don't finish reading this app.</div>
-  </footer>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -425,18 +442,20 @@ function loadPlace(){ try{ return JSON.parse(localStorage.getItem("hwd.place")||
   });
 })();
 
-/* ================= sports on/off toggle ================= */
-(function(){
-  const btn=$("#sportsBtn");
-  function sync(){ btn.classList.toggle("off", !sportsEnabled()); btn.title=(sportsEnabled()?"Hide":"Show")+" sports"; }
-  sync();
-  btn.addEventListener("click",()=>{
-    const on=!sportsEnabled();
-    try{ localStorage.setItem("hwd.sports", on?"on":"off"); }catch(e){}
-    sync();
-    if(_lastPlace) go(_lastPlace);
-  });
-})();
+/* ================= tab navigation ================= */
+function currentTab(){ try{ return localStorage.getItem("hwd.tab")||"live"; }catch(e){ return "live"; } }
+function showTab(name){
+  try{ localStorage.setItem("hwd.tab",name); }catch(e){}
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("sel",b.dataset.tab===name));
+  const radar=name==="radar", content=$("#content"), rp=$("#radarPanel");
+  if(content) content.hidden=radar;
+  if(rp) rp.hidden=!radar;
+  if(!radar && content){ content.querySelectorAll(".tab-panel").forEach(p=>{ p.hidden = p.dataset.panel!==name; }); }
+  if(radar){ openRadar(); }
+  else if(name==="live" && _trend){ requestAnimationFrame(()=>drawTrend()); }
+  try{ window.scrollTo({top:0,behavior:"instant"}); }catch(e){ window.scrollTo(0,0); }
+}
+(function(){ const nav=$("#nav"); if(nav) nav.addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) showTab(b.dataset.tab); }); })();
 
 /* ================= Pro entitlement ================= */
 function isPro(){ try{ return localStorage.getItem("hwd.pro")==="1"; }catch(e){ return false; } }
@@ -1094,7 +1113,7 @@ async function go(place){
     "&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto";
   try{
     const tm = teamsFor(place);
-    const schedP = (sportsEnabled() && tm.keys.length) ? getSchedules(tm.keys) : Promise.resolve([]);
+    const schedP = tm.keys.length ? getSchedules(tm.keys) : Promise.resolve([]);
     const [fc, air, alerts, schedules] = await Promise.all([ getJSON(fUrl), getJSON(aUrl).catch(()=>null), getAlerts(lat,lon), schedP ]);
     render(place, fc, air, alerts, {list:schedules, metro:tm.metro});
   }catch(err){ showMsg("The forecast servers ghosted us. "+esc(err.message||"")+" — try again or pick another spot.",false); }
@@ -1231,6 +1250,7 @@ function render(place, fc, air, alerts, sports){
         : isPreview()
         ? `<div class="preview-note">🔓 <b>Preview mode</b> — you're seeing Premium features. <button class="linkbtn" data-pro-open>Unlock Premium</button></div>`
         : "" }
+    <section class="tab-panel" data-panel="live">
     <div class="tiles">
       ${tileHTML("🌡️","Temperature",Math.round(temp)+"°",`H ${hiT}° · L ${loT}°`,"var(--accent)",true)}
       ${tileHTML("🧥","Feels Like",Math.round(feels)+"°",fdiffSub,"var(--accent)")}
@@ -1273,8 +1293,9 @@ function render(place, fc, air, alerts, sports){
         <p class="disclaim" style="margin-top:10px">🔥 ${bbq.smoker}</p></div>`
       : lockedCard("BBQ forecast","Grill verdict, the best grilling window today, and a low-and-slow smoker note.")}
     </div>
+    </section>
 
-    ${SPORTS?`
+    <section class="tab-panel" data-panel="sports" hidden>
     <div class="section-head"><h2>The Ballpark Report</h2><small>weather vs. the game</small><span class="season-tag">${sea.label}</span></div>
     <div class="grid">
       ${gameWatchCard(sched, tstat, metroName)}
@@ -1288,8 +1309,10 @@ function render(place, fc, air, alerts, sports){
             <ul class="wear-list">${bp.items.map(i=>`<li>${i}</li>`).join("")}</ul>
             ${bp.note?`<p>${bp.note}</p>`:""}`;})()}
       </div>
-    </div>`:""}
+    </div>
+    </section>
 
+    <section class="tab-panel" data-panel="nature" hidden>
     <div class="section-head"><h2>Field &amp; Stream</h2><small>golf · hunting · fishing · solunar</small><span class="pro-tag">Premium</span></div>
     ${pro ? `<div class="grid">
       <div class="card"><h2>Golf — playability</h2>
@@ -1331,15 +1354,19 @@ function render(place, fc, air, alerts, sports){
         </div>
         <p class="disclaim">Sun ${sol.sun.rise}–${sol.sun.set}. Solunar windows computed from moon position — guides, not gospel.</p></div>
     </div>` : `<div class="grid">${lockedCard("Field & Stream","Golf tee-time playability, fishing bite & hunting deer-movement ratings, solunar feeding windows, moon phase and the barometric pressure trend — the data that actually predicts the outdoors.")}</div>`}
+    </section>
 
+    <section class="tab-panel" data-panel="forecast" hidden>
     <div class="section-head"><h2>Today, Hour by Hour</h2><small>next 24 hours</small></div>
     <div class="hours">${hourlyCards(fc)}</div>
 
     <div class="section-head"><h2>The 10-Day</h2><small>what NOAA's models expect</small></div>
     <div class="strip">${d.time.map((iso,i)=>dayCard(iso,i,d,dayHum)).join("")}</div>
+    </section>
   `;
   $("#srcLine").textContent="Pulled "+now.toLocaleString()+". Not a substitute for official warnings — if a siren goes off, don't finish reading this app.";
   initTrend();
+  showTab(currentTab());
 }
 
 function chip(k,v){ return `<div class="chip"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
@@ -1837,7 +1864,6 @@ async function windLayer(){
 }
 function scheduleWindRefresh(){ if(_curLayer!=="wind"||!_map) return; clearTimeout(_windT); _windT=setTimeout(()=>{ if(_curLayer==="wind") windLayer(); },500); }
 async function openRadar(){
-  const m=$("#radarModal"); m.hidden=false;
   if(!window.L){ $("#mapNote").textContent="Map library didn't load — check your connection."; return; }
   if(!_map){ _map=window.L.map("map",{zoomControl:true}).setView([44.45,-88.06],7); setBase(); _map.on("moveend zoomend",scheduleWindRefresh); }
   const p=_lastPlace||{lat:44.4489,lon:-88.0604};
@@ -1854,11 +1880,8 @@ async function openRadar(){
   selectLayer(_curLayer);
 }
 (function(){
-  const rb=$("#radarBtn"); if(rb) rb.addEventListener("click",openRadar);
-  const m=$("#radarModal"); if(!m) return;
-  m.addEventListener("click",e=>{ if(e.target===m){ stopPlay(); m.hidden=true; } });
-  m.querySelectorAll("[data-radar-close]").forEach(b=>b.addEventListener("click",()=>{ stopPlay(); m.hidden=true; }));
-  m.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>selectLayer(b.dataset.layer)));
+  const rp=$("#radarPanel"); if(!rp) return;
+  rp.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>selectLayer(b.dataset.layer)));
   const pb=$("#playBtn"); if(pb) pb.addEventListener("click",()=>{ _playing?stopPlay():playRadar(); });
   const sl=$("#timeline"); if(sl) sl.addEventListener("input",()=>{ stopPlay(); showFrame(+sl.value); });
   const rc=$("#recenterBtn"); if(rc) rc.addEventListener("click",()=>{ const p=_lastPlace||{lat:44.45,lon:-88.06}; if(_map) _map.setView([p.lat,p.lon],7); });
