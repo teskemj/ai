@@ -140,7 +140,7 @@
   .tile .tval{font-family:var(--disp);font-weight:700;font-size:1.85rem;line-height:1.05;margin-top:7px;font-variant-numeric:tabular-nums}
   .tile .tsub{font-size:.75rem;color:var(--ink-soft);margin-top:3px}
   /* temperature trend chart */
-  .trend-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .trend-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
   .trend-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .trend-head h2{font-family:var(--disp);font-weight:700;font-size:1.05rem;letter-spacing:-.01em;margin:0}
   .trend-head .ranges{display:flex;gap:4px;margin-left:auto}
@@ -157,7 +157,11 @@
   @media(max-width:560px){ .trend-wrap{height:230px} }
 
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px;margin-bottom:18px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+  /* location header */
+  #locbar{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  #locbar .lcity{font-family:var(--disp);font-weight:700;font-size:1.5rem;letter-spacing:-.01em}
+  #locbar .lmeta{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
   .card h2{margin:0 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
   .verdict{font-family:var(--disp);font-weight:700;font-size:1.5rem;letter-spacing:-.01em;line-height:1.05;margin:6px 0 6px}
   .verdict.go{color:var(--good)} .verdict.maybe{color:var(--warn)} .verdict.no{color:var(--bad)}
@@ -264,7 +268,7 @@
   .layer-sel{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
   .layer-sel button{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;padding:7px 11px;border-radius:999px}
   .layer-sel button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
-  .radar-card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .radar-card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
   #map{height:min(62vh,560px);background:var(--panel-2)}
   #map .leaflet-control-attribution{font-size:9px}
   #map.mapdark .leaflet-basemap-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
@@ -382,6 +386,7 @@
     <button data-tab="nature"><span class="ni">🎣</span><span class="nl">Field &amp; Stream</span></button>
   </nav>
   <div id="stage">
+    <div id="locbar" hidden></div>
     <div id="holiday" hidden></div>
     <div id="alerts" class="alerts" hidden></div>
     <div id="content">
@@ -1228,6 +1233,8 @@ function render(place, fc, air, alerts, sports){
     verdict: vq.title, quip: heroQuip(feels,temp,hum,wind,code,isDay).replace(/<[^>]+>/g,""),
     alert: alerts.length ? {event:alerts[0].event, headline:(alerts[0].headline||"")} : null
   };
+  { const lb=$("#locbar"); if(lb){ lb.hidden=false;
+    lb.innerHTML=`<span class="lcity">${esc(_snap.place)}</span><span class="lmeta">Updated ${now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span>`; } }
 
   // tile + chart data
   const hiT=Math.round(d.temperature_2m_max[0]), loT=Math.round(d.temperature_2m_min[0]);

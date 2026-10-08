@@ -25,6 +25,10 @@ no build, no dependencies, no API keys — plus a Capacitor wrapper for iOS/Andr
   **precipitation** radar (RainViewer), **cloud** cover (infrared satellite), and a
   **wind** arrow field (Open-Meteo) — all keyless
 
+> **Forecast accuracy is the #1 priority** — see **[ACCURACY.md](ACCURACY.md)** for the
+> data path (Open-Meteo `best_match` = HRRR + NBM + GFS for the Midwest) and the roadmap
+> (adding the official NWS gridpoint forecast as the US primary, a verification loop, etc.).
+
 ## Sources
 - Official hazard alerts: [National Weather Service](https://www.weather.gov) (`api.weather.gov`)
 - Forecast / humidity / air quality / pressure: [Open-Meteo](https://open-meteo.com) (NOAA GFS/HRRR)
