@@ -15,6 +15,9 @@
     "open:android": "cap open android",
     "build:purchases": "esbuild src/purchases.src.js --bundle --format=iife --minify --outfile=purchases.js",
     "assets:art": "node scripts/gen-assets.cjs",
+    "assets:shots": "node scripts/gen-shots.cjs",
+    "assets:feature": "node scripts/gen-feature.cjs",
+    "assets:store": "npm run assets:art && npm run assets:shots && npm run assets:feature",
     "assets": "capacitor-assets generate"
   },
   "dependencies": {

@@ -154,9 +154,15 @@ Generate from the live app (or `demo.html`, which is fully unlocked). Shoot in
 5. **BBQ / Field & Stream (Premium)** — "Grill, hunt, fish — timed to the weather."
 6. **Sports / Ballpark report** — "Weather at the ballpark + what to wear to the game."
 
-> Tip: a runnable Playwright screen-grabber already exists in the scratchpad
-> workflow (mock the APIs, set the viewport to each size, screenshot). Ask and
-> I'll generate the full set framed to these dimensions.
+**Generated set (dark theme) is in [`store-assets/`](store-assets/):**
+- `store-assets/screenshots/iphone-6.7/` — 6 shots at 1290×2796 (Apple)
+- `store-assets/screenshots/android-phone/` — 6 shots at 1080×2400 (Play)
+- `store-assets/feature-graphic.png` — 1024×500 (Play, required)
+- `store-assets/contact-sheet.png` — one-image overview
+
+Regenerate with `npm run assets:shots` / `npm run assets:feature`. (The radar shot
+uses a representative storm cell + neutral basemap for preview; re-shoot on a live
+device if you want an actual radar frame.)
 
 ---
 
@@ -166,7 +172,7 @@ Generate from the live app (or `demo.html`, which is fully unlocked). Shoot in
 - [ ] `npm run assets` run after `cap add ios android` (generates all sizes)
 - [x] Privacy policy page — `privacy-policy.html` (contact email set)
 - [x] Contact/support email set (policy + store listing): Michael.teske@outlook.com
-- [ ] Screenshots generated for each required size
+- [x] Screenshots generated — `store-assets/` (iPhone 6.7" + Android phone + feature graphic)
 - [ ] Apple App Privacy answers entered (table above)
 - [ ] Google Play Data Safety answers entered (table above)
 - [ ] RevenueCat products + entitlement live, sandbox-tested (REVENUECAT.md)
