@@ -312,11 +312,9 @@
     </div>
     <button id="radarBtn" class="icon" title="Radar & maps" aria-label="Radar and maps">🗺️</button>
     <button id="sportsBtn" class="icon" title="Show or hide sports" aria-label="Show or hide sports">⚾</button>
-    <button id="teamThemeBtn" class="icon" title="Background theme" aria-label="Background theme">🎨</button>
     <button id="proBtn" class="icon pro" title="Premium" aria-label="Premium features">Premium</button>
     <button id="locBtn" class="icon" title="Use my location" aria-label="Use my location">📍</button>
     <button id="themeBtn" class="icon" title="Toggle theme" aria-label="Toggle light or dark">◐</button>
-    <div id="themeMenu" hidden></div>
   </div>
 </header>
 
@@ -331,7 +329,6 @@
       <li>⛳ <b>Golf forecast</b> — tee-time playability &amp; best window</li>
       <li>🎣 <b>Fishing</b> — bite rating &amp; solunar feeding windows</li>
       <li>🦌 <b>Hunting</b> — deer-movement rating, moon &amp; pressure</li>
-      <li>🎨 <b>Team backgrounds</b> — set any team's colors by hand</li>
     </ul>
     <div class="price">$19.99<span>per year · or $2.99/mo · 14-day free trial, cancel anytime</span></div>
     <button class="primary big" data-pro-unlock>Keep Premium</button>
@@ -451,65 +448,8 @@ document.addEventListener("click",e=>{
   if(e.target===$("#proModal")) $("#proModal").hidden=true;
 });
 
-/* ================= team / ZIP background theme ================= */
-const TEAM_THEMES={
-  default:{name:"Default (Heartland)",p:"#1f6f8b",s:"#56b6cf"},
-  packers:{name:"Packers",p:"#203731",s:"#FFB612"}, brewers:{name:"Brewers",p:"#12284B",s:"#FFC52F"},
-  bucks:{name:"Bucks",p:"#00471B",s:"#EEE1C6"}, badgers:{name:"Badgers",p:"#C5050C",s:"#9B0000"},
-  vikings:{name:"Vikings",p:"#4F2683",s:"#FFC62F"}, twins:{name:"Twins",p:"#002B5C",s:"#D31145"},
-  wolves:{name:"Timberwolves",p:"#0C2340",s:"#78BE20"}, gophers:{name:"Gophers",p:"#7A0019",s:"#FFCC33"},
-  bears:{name:"Bears",p:"#0B162A",s:"#C83803"}, cubs:{name:"Cubs",p:"#0E3386",s:"#CC3433"},
-  whitesox:{name:"White Sox",p:"#27251F",s:"#C4CED4"}, bulls:{name:"Bulls",p:"#CE1141",s:"#111111"},
-  lions:{name:"Lions",p:"#0076B6",s:"#B0B7BC"}, tigers:{name:"Tigers",p:"#0C2340",s:"#FA4616"},
-  pistons:{name:"Pistons",p:"#1D428A",s:"#C8102E"}, wolverines:{name:"Wolverines",p:"#00274C",s:"#FFCB05"},
-  browns:{name:"Browns",p:"#311D00",s:"#FF3C00"}, guardians:{name:"Guardians",p:"#0C2340",s:"#E31937"},
-  cavaliers:{name:"Cavaliers",p:"#860038",s:"#FDBB30"}, buckeyes:{name:"Buckeyes",p:"#BB0000",s:"#666666"},
-  bengals:{name:"Bengals",p:"#FB4F14",s:"#000000"}, reds:{name:"Reds",p:"#C6011F",s:"#000000"},
-  colts:{name:"Colts",p:"#002C5F",s:"#A2AAAD"}, pacers:{name:"Pacers",p:"#002D62",s:"#FDBB30"},
-  cardinals:{name:"Cardinals",p:"#C41E3A",s:"#0C2340"}, royals:{name:"Royals",p:"#004687",s:"#BD9B60"},
-  chiefs:{name:"Chiefs",p:"#E31837",s:"#FFB81C"}, hawkeyes:{name:"Hawkeyes",p:"#111111",s:"#FFCD00"},
-  huskers:{name:"Cornhuskers",p:"#E41C38",s:"#9aa0a6"}, illini:{name:"Illini",p:"#13294B",s:"#E84A27"}
-};
-function themeSel(){ try{ return localStorage.getItem("hwd.themeTeam")||"auto"; }catch(e){ return "auto"; } }
-function resolveThemeKey(place){
-  let sel=themeSel();
-  // picking a specific team is Premium; free users fall back to Auto (still colored by ZIP)
-  if(sel!=="auto" && sel!=="default" && !premiumUnlocked()) sel="auto";
-  if(sel!=="auto") return TEAM_THEMES[sel]?sel:"default";
-  if(place){ const t=teamsFor(place); const k=(t.keys||[]).find(k=>TEAM_THEMES[k]); if(k) return k; }
-  return "default";
-}
-function relLum(c){ return (0.299*c[0]+0.587*c[1]+0.114*c[2])/255; }
-function accentFrom(c){ const target=0.46,l=relLum(c);
-  return l<target ? lerpRGB(c,[255,255,255],Math.min(0.85,(target-l)/(1-l))) : lerpRGB(c,[0,0,0],Math.min(0.85,(l-target)/l)); }
-function applyTheme(place){
-  const key=resolveThemeKey(place||_lastPlace), th=TEAM_THEMES[key]||TEAM_THEMES.default;
-  const p=toRGB(th.p), s=toRGB(th.s), root=document.documentElement.style;
-  if(key==="default"){ root.removeProperty("--accent"); scene.team=null; }
-  else { root.setProperty("--accent", css(accentFrom(p))); scene.team={p,s}; }
-}
-(function(){
-  const btn=$("#teamThemeBtn"), menu=$("#themeMenu");
-  function build(){
-    const sel=themeSel(), pro=premiumUnlocked();
-    let html=`<div class="hd">Background theme</div>`;
-    const row=(key,label,lock)=>{ const th=TEAM_THEMES[key];
-      const sw=key==='auto'?`<span class="sw" style="background:linear-gradient(135deg,#888,#ccc)"></span>`
-        :(th?`<span class="sw" style="background:${th.p}"></span>`:`<span class="sw" style="background:linear-gradient(135deg,#1f6f8b,#56b6cf)"></span>`);
-      return `<button data-theme="${key}"${lock?' data-lock="1"':''} class="${sel===key?'sel':''}">${sw}${esc(label)}${lock?' 🔒':''}</button>`; };
-    html+=row("auto","Auto — local team",false);
-    html+=row("default","Default (Heartland)",false);
-    html+=`<div class="hd">Teams${pro?"":" · Premium"}</div>`;
-    Object.keys(TEAM_THEMES).filter(k=>k!=="default").forEach(k=>{ html+=row(k,TEAM_THEMES[k].name,!pro); });
-    menu.innerHTML=html; menu.className="menu";
-  }
-  btn.addEventListener("click",e=>{ e.stopPropagation(); if(menu.hidden){ build(); menu.hidden=false; } else menu.hidden=true; });
-  menu.addEventListener("click",e=>{ const b=e.target.closest("button[data-theme]"); if(!b) return;
-    if(b.dataset.lock){ menu.hidden=true; openPro(); return; }
-    try{ localStorage.setItem("hwd.themeTeam",b.dataset.theme); }catch(err){}
-    menu.hidden=true; applyTheme(_lastPlace); });
-  document.addEventListener("click",e=>{ if(!e.target.closest("#themeMenu") && !e.target.closest("#teamThemeBtn")) menu.hidden=true; });
-})();
+/* Background theming removed — no-op kept so existing callers stay valid. */
+function applyTheme(){ try{ document.documentElement.style.removeProperty("--accent"); }catch(e){} scene.team=null; }
 
 /* ================= weather codes ================= */
 const WMO={
