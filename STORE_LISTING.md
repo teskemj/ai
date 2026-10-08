@@ -125,11 +125,10 @@ Play Console → App content → Data safety.
 ## Privacy policy URL (mandatory, both stores)
 Host the included **`privacy-policy.html`** and use its public URL:
 `https://teskemj.github.io/ai/privacy-policy.html`
-*(Remember to fill in the contact email placeholder in that file first.)*
 
 ## Support URL / contact
 - Support URL: `https://teskemj.github.io/ai/`
-- Contact email: **[add a public support email]**
+- Contact email: `Michael.teske@outlook.com`
 
 ---
 
@@ -165,8 +164,8 @@ Generate from the live app (or `demo.html`, which is fully unlocked). Shoot in
 - [ ] Data licensing resolved (STORE_LAUNCH.md §0) ⚠️
 - [x] App icon (1024²) + splash (2732²) — `assets/icon.png`, `assets/splash.png`
 - [ ] `npm run assets` run after `cap add ios android` (generates all sizes)
-- [x] Privacy policy page — `privacy-policy.html` (fill in contact email)
-- [ ] Contact/support email chosen and set (policy + store listing)
+- [x] Privacy policy page — `privacy-policy.html` (contact email set)
+- [x] Contact/support email set (policy + store listing): Michael.teske@outlook.com
 - [ ] Screenshots generated for each required size
 - [ ] Apple App Privacy answers entered (table above)
 - [ ] Google Play Data Safety answers entered (table above)
