@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy · Heartland Weather Desk</title>
+<style>
+  :root{--bg:#0d131b;--panel:#141c26;--ink:#e7edf3;--soft:#9fb0c0;--line:#2a3744;--accent:#56b6cf;--amber:#e6a94a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:0 16px}
+  main{max-width:760px;margin:0 auto;padding:48px 0 80px}
+  h1{font-size:1.9rem;margin:0 0 .2em;letter-spacing:.3px}
+  h2{font-size:1.15rem;margin:2em 0 .4em;color:var(--accent)}
+  .sub{color:var(--soft);margin:0 0 2em}
+  .eff{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;color:var(--soft);text-transform:uppercase;letter-spacing:.08em}
+  a{color:var(--amber)}
+  table{border-collapse:collapse;width:100%;margin:.6em 0;font-size:.92rem}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{color:var(--soft);font-weight:600}
+  ul{padding-left:1.2em}
+  li{margin:.25em 0}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;color:var(--soft);font-size:.9rem;margin:1.2em 0}
+  footer{margin-top:3em;border-top:1px solid var(--line);padding-top:1.2em;color:var(--soft);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy Policy</h1>
+  <p class="sub">Heartland Weather Desk</p>
+  <p class="eff">Effective: October 8, 2026</p>
+
+  <p>Heartland Weather Desk ("the app," "we," "us") is a weather, sports, and outdoors
+  app for the Midwest. We built it to be useful without being nosy. This policy explains
+  exactly what the app does and does not do with information. In plain terms: we do not
+  sell your data, we do not show ads, we do not run analytics or trackers, and we do not
+  require an account.</p>
+
+  <h2>Information the app uses</h2>
+  <table>
+    <tr><th>What</th><th>Why</th><th>Where it goes</th></tr>
+    <tr>
+      <td><strong>Location</strong> (approximate or precise) — either your device
+      location, or a city/ZIP you type in</td>
+      <td>To fetch the forecast, air quality, alerts, and sun/moon times for where you are</td>
+      <td>Sent to the weather providers below <em>to retrieve data for that spot</em>.
+      It is not stored on our servers unless you turn on severe-weather push alerts (see below).</td>
+    </tr>
+    <tr>
+      <td><strong>App settings &amp; saved places</strong> (your last location, units,
+      premium/trial state, preferences)</td>
+      <td>So the app remembers your setup between visits</td>
+      <td>Stored only on your own device (browser <code>localStorage</code> / app
+      preferences). Never uploaded.</td>
+    </tr>
+    <tr>
+      <td><strong>Push token + watched locations</strong> — only if you enable
+      severe-weather push alerts (native app)</td>
+      <td>So we can send you a notification when the National Weather Service issues a
+      severe or extreme alert for a place you watch</td>
+      <td>Stored in our alert service (Google Firebase) tied to your anonymous device
+      push token — not to your name or an account. See "Push alerts."</td>
+    </tr>
+    <tr>
+      <td><strong>Purchase status</strong> — if you subscribe to Premium</td>
+      <td>To unlock and restore Premium features across your devices</td>
+      <td>Handled by RevenueCat and the App Store / Google Play. We never see or store
+      your card or payment details.</td>
+    </tr>
+  </table>
+
+  <h2>What we do NOT collect</h2>
+  <ul>
+    <li>No accounts, names, emails, or passwords.</li>
+    <li>No advertising identifiers; no ads.</li>
+    <li>No analytics, behavioral tracking, or third-party trackers.</li>
+    <li>No selling or sharing of personal information with data brokers — ever.</li>
+    <li>No contacts, photos, microphone, or background location.</li>
+  </ul>
+
+  <h2>Push alerts (optional)</h2>
+  <p>If — and only if — you turn on severe-weather push notifications, the app sends our
+  alert service your device's push token, the platform (iOS/Android), and the
+  coordinates/labels of the locations you want watched (up to ten). A scheduled job
+  checks the National Weather Service for those points and sends you a notification when
+  there's a severe or extreme alert. We store the token, those locations, and the IDs of
+  alerts already sent (so you aren't notified twice). You can stop this at any time by
+  disabling notifications; turning them off removes your device from the watch list, and
+  tokens that are no longer valid are deleted automatically.</p>
+
+  <h2>Third-party services</h2>
+  <p>To deliver the forecast the app talks to these services. Your location (the spot
+  you're viewing) is sent to them so they can return data for it; your request is subject
+  to each provider's own privacy practices.</p>
+  <table>
+    <tr><th>Service</th><th>Used for</th></tr>
+    <tr><td>U.S. National Weather Service (weather.gov)</td><td>Official forecast &amp; severe-weather alerts</td></tr>
+    <tr><td>Open-Meteo</td><td>Forecast, air quality, pressure, UV, sun times</td></tr>
+    <tr><td>ESPN public data</td><td>Sports schedules</td></tr>
+    <tr><td>RainViewer</td><td>Radar &amp; satellite imagery</td></tr>
+    <tr><td>OpenStreetMap</td><td>Map tiles</td></tr>
+    <tr><td>Zippopotam.us</td><td>ZIP-code lookup</td></tr>
+    <tr><td>Google Firebase</td><td>Delivering severe-weather push alerts (only if enabled)</td></tr>
+    <tr><td>RevenueCat / Apple App Store / Google Play</td><td>Processing the Premium subscription (only if you purchase)</td></tr>
+  </table>
+
+  <h2>Children</h2>
+  <p>The app is not directed at children under 13 and does not knowingly collect personal
+  information from them.</p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li><strong>Location:</strong> you can deny location permission and search by city/ZIP
+    instead; the app still works.</li>
+    <li><strong>Push alerts:</strong> optional, off until you enable them, and removable
+    by turning notifications off.</li>
+    <li><strong>Local data:</strong> clearing the app's data / your browser storage erases
+    saved places and settings.</li>
+  </ul>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, we'll update the date at the top and post the new version at
+  this URL.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about privacy? Email
+  <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a>.</p>
+
+  <div class="note"><strong>Developer note (remove before publishing):</strong> replace
+  <code>CONTACT_EMAIL_HERE</code> (both places above) with the support/contact email you
+  want shown publicly. The stores require a working contact. Consider a dedicated address
+  (e.g. a support@ alias) rather than a personal inbox, since this page is public.</div>
+
+  <footer>Heartland Weather Desk · This app is not a substitute for official warnings.
+  If a siren goes off, don't finish reading the app.</footer>
+</main>
+</body>
+</html>

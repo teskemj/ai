@@ -14,6 +14,7 @@ if (!existsSync("index.html")) {
 const src = readFileSync("index.html", "utf8");
 copyFileSync("index.html", "www/index.html");
 if (existsSync("purchases.js")) copyFileSync("purchases.js", "www/purchases.js"); // RevenueCat client (stub on web)
+if (existsSync("privacy-policy.html")) copyFileSync("privacy-policy.html", "www/privacy-policy.html"); // store-required policy page
 
 // Demo build: everything unlocked, no paywall UI (for marketing, investors, store review).
 const demo = "<script>window.HWD_DEMO=true;</script>\n" + src;

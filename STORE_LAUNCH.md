@@ -53,8 +53,13 @@ Free is genuinely useful: **weather + local sports**. Premium unlocks everything
 3. Wire `@capacitor/push-notifications` (severe weather) and `@capacitor/local-notifications` (BBQ/game reminders).
 4. Add in-app purchases via RevenueCat; gate the Pro features.
 
+> **Ready-to-paste listing copy, privacy-label / Data-Safety answers, and the
+> screenshot spec live in [STORE_LISTING.md](STORE_LISTING.md).** A hostable
+> privacy policy is in [privacy-policy.html](privacy-policy.html).
+
 ## 5. Store submission assets (both stores require these)
-- App icon (1024×1024) + splash — generate with `npm run assets`
+- App icon (1024×1024) + splash (2732×2732) — **done** (`assets/icon.png`,
+  `assets/splash.png`); run `npm run assets` after `cap add` to fan out all sizes
 - Screenshots for each required device size (iPhone 6.7"/6.5", iPad, Android phone/tablet)
 - **Privacy policy URL** (mandatory). Must disclose location use and any analytics.
 - App Store: privacy "nutrition label" + data-use answers

@@ -14,6 +14,7 @@
     "open:ios": "cap open ios",
     "open:android": "cap open android",
     "build:purchases": "esbuild src/purchases.src.js --bundle --format=iife --minify --outfile=purchases.js",
+    "assets:art": "node scripts/gen-assets.cjs",
     "assets": "capacitor-assets generate"
   },
   "dependencies": {
