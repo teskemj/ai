@@ -47,8 +47,13 @@ hourly outlook, the temperature trend, and today's rain odds, backed by
 high-resolution models (HRRR/NBM) for everything else. You see the source right
 on screen.
 
+**An honest sky.** Most apps round the day up to a cheerful sun. We show the actual
+cloud cover — clear, partly cloudy, overcast — as a straight percentage, because a
+grey Tuesday is still a Tuesday.
+
 **What you get, free:**
 • 10-day and hour-by-hour forecast, timezone-correct wherever you look
+• Cloud cover you can trust — a real sky percentage, not full-sun wishful thinking
 • Air quality (US AQI), humidity, and a real "feels like"
 • Extreme-weather alerts straight from the National Weather Service
 • Plain-English **what to wear** and a blunt **should-I-stay-home** verdict

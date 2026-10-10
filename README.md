@@ -9,6 +9,7 @@ no build, no dependencies, no API keys — plus a Capacitor wrapper for iOS/Andr
 - **10-day forecast** with highs/lows, rain odds, wind, and daily humidity
 - **Hourly** next-24-hours strip, timezone-correct per location
 - **Air quality** (US AQI) with a color-coded gauge and PM2.5
+- **Cloud cover** read — an honest sky percentage (clear → overcast), not wishful full sun
 - **Humidity & comfort** read
 - **Extreme-weather alerts** straight from the U.S. National Weather Service
 - **What to wear** and a blunt **stay-home verdict**, with a dry sense of humor
